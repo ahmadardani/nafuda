@@ -1,14 +1,227 @@
 #include "mainwindow.h"
-#include "./ui_mainwindow.h"
+#include "ui_mainwindow.h"
+
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QClipboard>
+#include <QDirIterator>
+#include <QInputDialog>
+#include <QDebug>
+#include <QTextStream>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+ui->stackedWidget->setCurrentIndex(0);
+
+connect(ui->btnWelcomeOpen, &QPushButton::clicked, this, &MainWindow::openFolder);
+
+contentTemplate = "File: {name}\n```\n{code}\n```\n";
+
+    connect(ui->actionOpenFolder, &QAction::triggered, this, &MainWindow::openFolder);
+    connect(ui->actionTemplateSettings, &QAction::triggered, this, &MainWindow::openTemplateOptions);
+    connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::showAbout);
+
+    connect(ui->treeWidget, &QTreeWidget::itemClicked, this, &MainWindow::onTreeItemClicked);
+    connect(ui->treeWidget, &QTreeWidget::itemChanged, this, &MainWindow::onTreeItemChanged);
+
+    connect(ui->btnCopyTree, &QPushButton::clicked, this, &MainWindow::copyDirectoryTree);
+    connect(ui->btnCopyContent, &QPushButton::clicked, this, &MainWindow::copyFileContent);
+    connect(ui->btnCopyFull, &QPushButton::clicked, this, &MainWindow::copyFullContext);
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::openFolder()
+{
+    QString dir = QFileDialog::getExistingDirectory(this, "Open Directory",
+                                                    QDir::homePath(),
+                                                    QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+    if (!dir.isEmpty()) {
+        currentRootDir = dir;
+
+ui->stackedWidget->setCurrentIndex(1);
+
+        ui->treeWidget->clear();
+        ui->selectedListWidget->clear();
+
+        QTreeWidgetItem *rootItem = new QTreeWidgetItem(ui->treeWidget);
+        rootItem->setText(0, QDir(dir).dirName());
+        rootItem->setIcon(0, QApplication::style()->standardIcon(QStyle::SP_DirIcon));
+        rootItem->setData(0, Qt::UserRole, dir);
+
+        populateTree(dir, rootItem);
+        ui->treeWidget->expandItem(rootItem);
+    }
+}
+
+void MainWindow::populateTree(const QString &path, QTreeWidgetItem *parentItem)
+{
+    QDir dir(path);
+    dir.setFilter(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
+    dir.setSorting(QDir::DirsFirst | QDir::Name);
+
+    QFileInfoList list = dir.entryInfoList();
+    for (const QFileInfo &fileInfo : list) {
+        if (fileInfo.fileName().startsWith(".")) continue;
+
+        QTreeWidgetItem *item = new QTreeWidgetItem(parentItem);
+        item->setText(0, fileInfo.fileName());
+        item->setData(0, Qt::UserRole, fileInfo.filePath());
+
+        if (fileInfo.isDir()) {
+            item->setIcon(0, QApplication::style()->standardIcon(QStyle::SP_DirIcon));
+            populateTree(fileInfo.filePath(), item);
+        } else {
+            item->setIcon(0, QApplication::style()->standardIcon(QStyle::SP_FileIcon));
+            item->setCheckState(0, Qt::Unchecked);
+        }
+    }
+}
+
+void MainWindow::onTreeItemClicked(QTreeWidgetItem *item, int column)
+{
+    QString path = item->data(0, Qt::UserRole).toString();
+    QFileInfo info(path);
+
+    if (info.isFile()) {
+        QFile file(path);
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            ui->codeViewer->setText(file.readAll());
+        }
+    }
+}
+
+void MainWindow::onTreeItemChanged(QTreeWidgetItem *item, int column)
+{
+    if (item->childCount() > 0) return;
+
+    QString fullPath = item->data(0, Qt::UserRole).toString();
+    QString relativePath = QDir(currentRootDir).relativeFilePath(fullPath);
+
+    if (item->checkState(0) == Qt::Checked) {
+        if (ui->selectedListWidget->findItems(relativePath, Qt::MatchExactly).isEmpty()) {
+            ui->selectedListWidget->addItem(relativePath);
+        }
+    } else {
+        QList<QListWidgetItem*> items = ui->selectedListWidget->findItems(relativePath, Qt::MatchExactly);
+        for (auto *i : items) {
+            delete ui->selectedListWidget->takeItem(ui->selectedListWidget->row(i));
+        }
+    }
+}
+
+QString MainWindow::generateAsciiTree(const QString &path, const QString &prefix)
+{
+    QString result;
+    QDir dir(path);
+    dir.setFilter(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
+    dir.setSorting(QDir::DirsFirst | QDir::Name);
+
+    QFileInfoList list = dir.entryInfoList();
+    for (int i = 0; i < list.size(); ++i) {
+        QFileInfo info = list.at(i);
+        if (info.fileName().startsWith(".")) continue;
+
+        bool isLast = (i == list.size() - 1);
+        QString connector = isLast ? "└── " : "├── ";
+
+        result += prefix + connector + info.fileName() + "\n";
+
+        if (info.isDir()) {
+            QString childPrefix = prefix + (isLast ? "    " : "│   ");
+            result += generateAsciiTree(info.filePath(), childPrefix);
+        }
+    }
+    return result;
+}
+
+void MainWindow::copyDirectoryTree()
+{
+    if (currentRootDir.isEmpty()) return;
+    QString treeStr = "Project Structure:\n" + QDir(currentRootDir).dirName() + "\n";
+    treeStr += generateAsciiTree(currentRootDir, "");
+
+    QApplication::clipboard()->setText(treeStr);
+    QMessageBox::information(this, "Nafuda", "Directory structure copied!");
+}
+
+void MainWindow::copyFileContent()
+{
+    if (ui->selectedListWidget->count() == 0) {
+        QMessageBox::warning(this, "Warning", "No files selected!");
+        return;
+    }
+
+    QString finalOutput = "";
+
+    for(int i = 0; i < ui->selectedListWidget->count(); ++i) {
+        QString relPath = ui->selectedListWidget->item(i)->text();
+        QString fullPath = QDir(currentRootDir).filePath(relPath);
+
+        QFile file(fullPath);
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QString content = file.readAll();
+
+            QString entry = contentTemplate;
+            entry.replace("{name}", relPath);
+            entry.replace("{code}", content);
+
+            finalOutput += entry + "\n";
+        }
+    }
+
+    QApplication::clipboard()->setText(finalOutput);
+    QMessageBox::information(this, "Nafuda", "Selected file contents copied!");
+}
+
+void MainWindow::copyFullContext()
+{
+    if (currentRootDir.isEmpty()) return;
+
+    QString output = "Project Structure:\n" + QDir(currentRootDir).dirName() + "\n";
+    output += generateAsciiTree(currentRootDir, "") + "\n\n";
+    output += "File Contents:\n";
+
+    for(int i = 0; i < ui->selectedListWidget->count(); ++i) {
+        QString relPath = ui->selectedListWidget->item(i)->text();
+        QString fullPath = QDir(currentRootDir).filePath(relPath);
+
+        QFile file(fullPath);
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QString content = file.readAll();
+            QString entry = contentTemplate;
+            entry.replace("{name}", relPath);
+            entry.replace("{code}", content);
+            output += entry + "\n";
+        }
+    }
+
+    QApplication::clipboard()->setText(output);
+    QMessageBox::information(this, "Nafuda", "Full context copied!");
+}
+
+void MainWindow::openTemplateOptions()
+{
+    bool ok;
+    QString text = QInputDialog::getMultiLineText(this, "Template Settings",
+                                                  "Set format using {name} and {code}:",
+                                                  contentTemplate, &ok);
+    if (ok && !text.isEmpty()) {
+        contentTemplate = text;
+    }
+}
+
+void MainWindow::showAbout()
+{
+    QMessageBox::about(this, "About Nafuda",
+                       "Nafuda\n\n"
+                       "Designed to easily copy project structure and code context for LLMs.\n"
+                       "Developed with Qt C++.");
 }
