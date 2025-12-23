@@ -169,7 +169,7 @@ void MainWindow::copyDirectoryTree()
 void MainWindow::copyFileContent()
 {
     if (ui->selectedListWidget->count() == 0) {
-        ui->lblStatus->setText("No files selected!");
+        ui->lblStatus->setText("⚠ No files selected!");
         QTimer::singleShot(3000, [this](){
             ui->lblStatus->clear();
         });
@@ -200,9 +200,17 @@ void MainWindow::copyFileContent()
 
 void MainWindow::copyFullContext()
 {
+
     if (currentRootDir.isEmpty()) return;
 
-    QString output = "Project Structure:\n" + QDir(currentRootDir).dirName() + "\n";
+if (ui->selectedListWidget->count() == 0) {
+        ui->lblStatus->setText("⚠ No files selected for context!");
+
+QTimer::singleShot(3000, [this](){ ui->lblStatus->clear(); });
+        return;
+    }
+
+QString output = "Project Structure:\n" + QDir(currentRootDir).dirName() + "\n";
     output += generateAsciiTree(currentRootDir, "") + "\n\n";
     output += "File Contents:\n";
 
@@ -222,7 +230,7 @@ void MainWindow::copyFullContext()
 
     QApplication::clipboard()->setText(output);
 
-    ui->lblStatus->setText("Full Context Copied!");
+ui->lblStatus->setText("Full context copied!");
     QTimer::singleShot(3000, [this](){ ui->lblStatus->clear(); });
 }
 
