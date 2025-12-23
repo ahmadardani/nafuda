@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
+#include <QApplication>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QClipboard>
@@ -21,14 +22,16 @@ connect(ui->btnWelcomeOpen, &QPushButton::clicked, this, &MainWindow::openFolder
 
 contentTemplate = "File: {name}\n```\n{code}\n```\n";
 
-    connect(ui->actionOpenFolder, &QAction::triggered, this, &MainWindow::openFolder);
+connect(ui->actionOpenFolder, &QAction::triggered, this, &MainWindow::openFolder);
     connect(ui->actionTemplateSettings, &QAction::triggered, this, &MainWindow::openTemplateOptions);
     connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::showAbout);
 
-    connect(ui->treeWidget, &QTreeWidget::itemClicked, this, &MainWindow::onTreeItemClicked);
+connect(ui->actionExit, &QAction::triggered, qApp, &QApplication::quit);
+
+connect(ui->treeWidget, &QTreeWidget::itemClicked, this, &MainWindow::onTreeItemClicked);
     connect(ui->treeWidget, &QTreeWidget::itemChanged, this, &MainWindow::onTreeItemChanged);
 
-    connect(ui->btnCopyTree, &QPushButton::clicked, this, &MainWindow::copyDirectoryTree);
+connect(ui->btnCopyTree, &QPushButton::clicked, this, &MainWindow::copyDirectoryTree);
     connect(ui->btnCopyContent, &QPushButton::clicked, this, &MainWindow::copyFileContent);
     connect(ui->btnCopyFull, &QPushButton::clicked, this, &MainWindow::copyFullContext);
 }

@@ -37,7 +37,7 @@
         <item>
          <spacer name="verticalSpacer_1">
           <property name="orientation">
-           <enum>Qt::Orientation::Vertical</enum>
+           <enum>Qt::Vertical</enum>
           </property>
           <property name="sizeHint" stdset="0">
            <size>
@@ -52,7 +52,7 @@
           <item>
            <spacer name="horizontalSpacer_1">
             <property name="orientation">
-             <enum>Qt::Orientation::Horizontal</enum>
+             <enum>Qt::Horizontal</enum>
             </property>
             <property name="sizeHint" stdset="0">
              <size>
@@ -85,7 +85,7 @@
           <item>
            <spacer name="horizontalSpacer_2">
             <property name="orientation">
-             <enum>Qt::Orientation::Horizontal</enum>
+             <enum>Qt::Horizontal</enum>
             </property>
             <property name="sizeHint" stdset="0">
              <size>
@@ -100,7 +100,7 @@
         <item>
          <spacer name="verticalSpacer_2">
           <property name="orientation">
-           <enum>Qt::Orientation::Vertical</enum>
+           <enum>Qt::Vertical</enum>
           </property>
           <property name="sizeHint" stdset="0">
            <size>
@@ -117,7 +117,7 @@
         <item>
          <widget class="QSplitter" name="splitter">
           <property name="orientation">
-           <enum>Qt::Orientation::Horizontal</enum>
+           <enum>Qt::Horizontal</enum>
           </property>
           <widget class="QTreeWidget" name="treeWidget">
            <property name="headerHidden">
@@ -170,9 +170,6 @@
             </item>
             <item>
              <widget class="QPushButton" name="btnCopyFull">
-              <property name="styleSheet">
-               <string notr="true">background-color: #e1f5fe; font-weight: bold; padding: 5px; border: 1px solid #b3e5fc; border-radius: 4px;</string>
-              </property>
               <property name="text">
                <string>Copy Full Context</string>
               </property>
@@ -202,6 +199,8 @@
      <string>File</string>
     </property>
     <addaction name="actionOpenFolder"/>
+    <addaction name="separator"/>
+    <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
     <property name="title">
@@ -236,6 +235,14 @@
   <action name="actionAbout">
    <property name="text">
     <string>About</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="text">
+    <string>Exit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
    </property>
   </action>
  </widget>
