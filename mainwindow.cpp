@@ -9,6 +9,7 @@
 #include <QInputDialog>
 #include <QDebug>
 #include <QTextStream>
+#include <QTimer>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -17,6 +18,10 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
 ui->stackedWidget->setCurrentIndex(0);
+
+ui->selectedListWidget->setFrameShape(QFrame::NoFrame);
+
+ui->lblStatus->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
 QList<int> sizes;
     sizes << 300 << 400 << 300;
@@ -56,6 +61,7 @@ void MainWindow::openFolder()
 
         ui->treeWidget->clear();
         ui->selectedListWidget->clear();
+        ui->lblStatus->clear();
 
         QTreeWidgetItem *rootItem = new QTreeWidgetItem(ui->treeWidget);
         rootItem->setText(0, QDir(dir).dirName());
@@ -155,13 +161,18 @@ void MainWindow::copyDirectoryTree()
     treeStr += generateAsciiTree(currentRootDir, "");
 
     QApplication::clipboard()->setText(treeStr);
-    QMessageBox::information(this, "Nafuda", "Directory structure copied!");
+
+    ui->lblStatus->setText("Directory Tree Copied!");
+    QTimer::singleShot(3000, [this](){ ui->lblStatus->clear(); });
 }
 
 void MainWindow::copyFileContent()
 {
     if (ui->selectedListWidget->count() == 0) {
-        QMessageBox::warning(this, "Warning", "No files selected!");
+        ui->lblStatus->setText("No files selected!");
+        QTimer::singleShot(3000, [this](){
+            ui->lblStatus->clear();
+        });
         return;
     }
 
@@ -174,17 +185,17 @@ void MainWindow::copyFileContent()
         QFile file(fullPath);
         if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             QString content = file.readAll();
-
             QString entry = contentTemplate;
             entry.replace("{name}", relPath);
             entry.replace("{code}", content);
-
             finalOutput += entry + "\n";
         }
     }
 
     QApplication::clipboard()->setText(finalOutput);
-    QMessageBox::information(this, "Nafuda", "Selected file contents copied!");
+
+    ui->lblStatus->setText("File Content Copied!");
+    QTimer::singleShot(3000, [this](){ ui->lblStatus->clear(); });
 }
 
 void MainWindow::copyFullContext()
@@ -210,7 +221,9 @@ void MainWindow::copyFullContext()
     }
 
     QApplication::clipboard()->setText(output);
-    QMessageBox::information(this, "Nafuda", "Full context copied!");
+
+    ui->lblStatus->setText("Full Context Copied!");
+    QTimer::singleShot(3000, [this](){ ui->lblStatus->clear(); });
 }
 
 void MainWindow::openTemplateOptions()

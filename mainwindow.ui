@@ -29,11 +29,6 @@
     </property>
     <item>
      <widget class="QStackedWidget" name="stackedWidget">
-      <property name="font">
-       <font>
-        <bold>false</bold>
-       </font>
-      </property>
       <property name="currentIndex">
        <number>1</number>
       </property>
@@ -42,7 +37,7 @@
         <item>
          <spacer name="verticalSpacer_1">
           <property name="orientation">
-           <enum>Qt::Orientation::Vertical</enum>
+           <enum>Qt::Vertical</enum>
           </property>
           <property name="sizeHint" stdset="0">
            <size>
@@ -57,7 +52,7 @@
           <item>
            <spacer name="horizontalSpacer_1">
             <property name="orientation">
-             <enum>Qt::Orientation::Horizontal</enum>
+             <enum>Qt::Horizontal</enum>
             </property>
             <property name="sizeHint" stdset="0">
              <size>
@@ -69,18 +64,11 @@
           </item>
           <item>
            <widget class="QPushButton" name="btnWelcomeOpen">
-            <property name="font">
-             <font>
-              <family>Sans</family>
-              <pointsize>10</pointsize>
-              <bold>false</bold>
-             </font>
-            </property>
             <property name="cursor">
              <cursorShape>PointingHandCursor</cursorShape>
             </property>
             <property name="styleSheet">
-             <string notr="true">padding: 15px 30px; background-color: #f0f0f0; border: 1px solid #ccc;</string>
+             <string notr="true">padding: 15px 30px; background-color: #f0f0f0; border: 1px solid #ccc; font-size: 14px;</string>
             </property>
             <property name="text">
              <string>Open Folder Project</string>
@@ -90,7 +78,7 @@
           <item>
            <spacer name="horizontalSpacer_2">
             <property name="orientation">
-             <enum>Qt::Orientation::Horizontal</enum>
+             <enum>Qt::Horizontal</enum>
             </property>
             <property name="sizeHint" stdset="0">
              <size>
@@ -105,7 +93,7 @@
         <item>
          <spacer name="verticalSpacer_2">
           <property name="orientation">
-           <enum>Qt::Orientation::Vertical</enum>
+           <enum>Qt::Vertical</enum>
           </property>
           <property name="sizeHint" stdset="0">
            <size>
@@ -122,7 +110,7 @@
         <item>
          <widget class="QSplitter" name="splitter">
           <property name="orientation">
-           <enum>Qt::Orientation::Horizontal</enum>
+           <enum>Qt::Horizontal</enum>
           </property>
           <widget class="QTreeWidget" name="treeWidget">
            <property name="headerHidden">
@@ -145,19 +133,28 @@
           <widget class="QWidget" name="rightPanelWidget" native="true">
            <layout class="QVBoxLayout" name="verticalLayout">
             <item>
-             <widget class="QLabel" name="label">
-              <property name="font">
-               <font>
-                <bold>false</bold>
-               </font>
+             <widget class="QGroupBox" name="groupBoxFiles">
+              <property name="title">
+               <string>Selected Files</string>
               </property>
-              <property name="text">
-               <string>Selected Files:</string>
-              </property>
+              <layout class="QVBoxLayout" name="verticalLayout_3">
+               <property name="leftMargin">
+                <number>5</number>
+               </property>
+               <property name="topMargin">
+                <number>5</number>
+               </property>
+               <property name="rightMargin">
+                <number>5</number>
+               </property>
+               <property name="bottomMargin">
+                <number>5</number>
+               </property>
+               <item>
+                <widget class="QListWidget" name="selectedListWidget"/>
+               </item>
+              </layout>
              </widget>
-            </item>
-            <item>
-             <widget class="QListWidget" name="selectedListWidget"/>
             </item>
             <item>
              <widget class="QPushButton" name="btnCopyTree">
@@ -183,6 +180,24 @@
               </property>
               <property name="text">
                <string>Copy Full Context</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="lblStatus">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="font">
+               <font>
+                <family>Sans</family>
+               </font>
+              </property>
+              <property name="text">
+               <string/>
               </property>
              </widget>
             </item>
