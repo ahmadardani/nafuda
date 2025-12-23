@@ -17,11 +17,13 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-ui->stackedWidget->setCurrentIndex(0);
+    setWindowIcon(QIcon(":/app_icon.png"));
 
-ui->selectedListWidget->setFrameShape(QFrame::NoFrame);
+    ui->stackedWidget->setCurrentIndex(0);
 
-ui->lblStatus->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    ui->selectedListWidget->setFrameShape(QFrame::NoFrame);
+
+    ui->lblStatus->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
 QList<int> sizes;
     sizes << 300 << 400 << 300;
@@ -247,8 +249,25 @@ void MainWindow::openTemplateOptions()
 
 void MainWindow::showAbout()
 {
-    QMessageBox::about(this, "About Nafuda",
-                       "Nafuda\n\n"
-                       "Designed to easily copy project structure and code context for LLMs.\n"
-                       "Developed with Qt C++.");
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle("About Nafuda");
+    msgBox.setTextFormat(Qt::RichText);
+    msgBox.setTextInteractionFlags(Qt::TextBrowserInteraction);
+
+    QString aboutText =
+        "<h3 style='margin-bottom: 0px;'>Nafuda</h3>"
+        "<p style='color: #666;'>Version 0.1.0</p>"
+        "<p>Designed to easily copy project structure and code context for LLMs.</p>"
+        "<p>Developed with Qt & C++.</p>"
+        "<p><a href=\"https://github.com/ahmadardani/nafuda\">GitHub Repository</a></p>"
+        "<p style='font-size: small;'>&copy; 2025 Ahmad Ardani</p>";
+
+    msgBox.setText(aboutText);
+
+    QPixmap iconPixmap(":/app_icon.png");
+    if (!iconPixmap.isNull()) {
+        msgBox.setIconPixmap(iconPixmap.scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    }
+
+    msgBox.exec();
 }

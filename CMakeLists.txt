@@ -17,7 +17,13 @@ set(PROJECT_SOURCES
         mainwindow.cpp
         mainwindow.h
         mainwindow.ui
+        resources.qrc
 )
+
+if(WIN32)
+    set(EXE_ICON "app_icon.ico")
+    set(PROJECT_SOURCES ${PROJECT_SOURCES} ${EXE_ICON})
+endif()
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(Nafuda
