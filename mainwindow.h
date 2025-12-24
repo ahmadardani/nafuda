@@ -18,24 +18,29 @@ public:
     ~MainWindow();
 
 private slots:
+
     void openFolder();
     void openTemplateOptions();
     void showAbout();
 
-    void onTreeItemClicked(QTreeWidgetItem *item, int column);
+void selectAllFiles();
+    void deselectAllFiles();
+
+void onTreeItemClicked(QTreeWidgetItem *item, int column);
     void onTreeItemChanged(QTreeWidgetItem *item, int column);
 
-    void copyDirectoryTree();
+void copyDirectoryTree();
     void copyFileContent();
     void copyFullContext();
 
 private:
     Ui::MainWindow *ui;
-
     QString currentRootDir;
     QString contentTemplate;
 
-    void populateTree(const QString &path, QTreeWidgetItem *parentItem);
+void populateTree(const QString &path, QTreeWidgetItem *parentItem);
+    void setAllChildCheckState(QTreeWidgetItem *item, Qt::CheckState state);
+    void updateFileList(QTreeWidgetItem *item);
     QString generateAsciiTree(const QString &path, const QString &prefix);
 };
 
