@@ -11,6 +11,7 @@
 #include <QTextStream>
 #include <QTimer>
 #include <QFileInfo>
+#include <QSettings>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -18,22 +19,23 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-setWindowIcon(QIcon(":/app_icon.png"));
+    setWindowIcon(QIcon(":/app_icon.png"));
     ui->stackedWidget->setCurrentIndex(0);
     ui->selectedListWidget->setFrameShape(QFrame::NoFrame);
     ui->lblStatus->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
-QList<int> sizes;
+    QList<int> sizes;
     sizes << 300 << 600 << 300;
     ui->splitter->setSizes(sizes);
 
-ui->splitter->setStretchFactor(0, 1);
+    ui->splitter->setStretchFactor(0, 1);
     ui->splitter->setStretchFactor(1, 2);
     ui->splitter->setStretchFactor(2, 1);
 
-contentTemplate = "File: {name}\n```\n{code}\n```\n";
+    QSettings settings("Nafuda", "Settings");
+    contentTemplate = settings.value("template", "File: {name}\n```\n{code}\n```\n").toString();
 
-connect(ui->btnWelcomeOpen, &QPushButton::clicked, this, &MainWindow::openFolder);
+    connect(ui->btnWelcomeOpen, &QPushButton::clicked, this, &MainWindow::openFolder);
     connect(ui->btnSelectAll, &QPushButton::clicked, this, &MainWindow::selectAllFiles);
     connect(ui->btnDeselectAll, &QPushButton::clicked, this, &MainWindow::deselectAllFiles);
 
@@ -75,7 +77,7 @@ void MainWindow::selectAllFiles() {
     }
     ui->treeWidget->blockSignals(false);
 
-ui->selectedListWidget->clear();
+    ui->selectedListWidget->clear();
     QDir rootDir(currentRootDir);
     QTreeWidgetItemIterator it(ui->treeWidget);
     while (*it) {
@@ -153,10 +155,10 @@ void MainWindow::onTreeItemClicked(QTreeWidgetItem *item, int column) {
                                    .arg(QString::number(sizeInKB, 'f', 2))
                                    .arg(info.suffix().toUpper() + " File");
 
-ui->lblFileInfo->setTextFormat(Qt::RichText);
+        ui->lblFileInfo->setTextFormat(Qt::RichText);
         ui->lblFileInfo->setText(fileInfoText);
 
-QFile file(path);
+        QFile file(path);
         if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
             ui->codeViewer->setText(file.readAll());
         }
@@ -261,7 +263,11 @@ void MainWindow::copyFileContent() {
 void MainWindow::openTemplateOptions() {
     bool ok;
     QString t = QInputDialog::getMultiLineText(this, "Template", "Format ({name}, {code}):", contentTemplate, &ok);
-    if (ok && !t.isEmpty()) contentTemplate = t;
+    if (ok && !t.isEmpty()) {
+        contentTemplate = t;
+        QSettings settings("Nafuda", "Settings");
+        settings.setValue("template", contentTemplate);
+    }
 }
 
 void MainWindow::showAbout()
