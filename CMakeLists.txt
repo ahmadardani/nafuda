@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(Nafuda VERSION 0.1 LANGUAGES CXX)
+project(Nafuda VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
@@ -70,6 +70,27 @@ install(TARGETS Nafuda
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+
+install(FILES nafuda.desktop
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+)
+
+install(FILES app_icon.png
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps
+    RENAME nafuda.png
+)
+
+set(CPACK_GENERATOR "DEB")
+set(CPACK_PACKAGE_NAME "nafuda")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_CONTACT "Ahmad Ardani <ahmadardani2011@gmail.com>")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "A lightweight tool for copying project structure for LLMs.")
+set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+
+include(CPack)
 
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(Nafuda)

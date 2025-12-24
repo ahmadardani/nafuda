@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Nafuda
+Comment=A lightweight tool for copying project structure and providing code context for LLMs.
+Exec=Nafuda
+Icon=nafuda
+Terminal=false
+Categories=Development;Utility;
