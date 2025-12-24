@@ -286,7 +286,7 @@ void MainWindow::showAbout()
 
     QString aboutText =
         "<h3 style='margin-bottom: 0px;'>Nafuda</h3>"
-        "<p style='color: #666;'>Version 0.1.0</p>"
+        "<p style='color: #666;'>Version 0.2.0</p>"
         "<p>A lightweight tool for copying project structure and providing code context for LLMs.</p>"
         "<p>Developed with Qt & C++.</p>"
         "<p><a href=\"https://github.com/ahmadardani/nafuda\">GitHub Repository</a></p>"
