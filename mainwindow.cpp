@@ -46,6 +46,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->treeWidget, &QTreeWidget::itemClicked, this, &MainWindow::onTreeItemClicked);
     connect(ui->treeWidget, &QTreeWidget::itemChanged, this, &MainWindow::onTreeItemChanged);
+    connect(ui->treeWidget, &QTreeWidget::currentItemChanged, this, &MainWindow::onCurrentItemChanged);
 
     connect(ui->btnCopyTree, &QPushButton::clicked, this, &MainWindow::copyDirectoryTree);
     connect(ui->btnCopyContent, &QPushButton::clicked, this, &MainWindow::copyFileContent);
@@ -166,6 +167,12 @@ void MainWindow::onTreeItemClicked(QTreeWidgetItem *item, int column) {
 
         ui->lblFileInfo->setText("Folder: " + info.fileName());
         ui->codeViewer->clear();
+    }
+}
+
+void MainWindow::onCurrentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous) {
+    if (current) {
+        onTreeItemClicked(current, 0);
     }
 }
 

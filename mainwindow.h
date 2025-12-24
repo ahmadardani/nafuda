@@ -23,13 +23,14 @@ private slots:
     void openTemplateOptions();
     void showAbout();
 
-void selectAllFiles();
+    void selectAllFiles();
     void deselectAllFiles();
 
-void onTreeItemClicked(QTreeWidgetItem *item, int column);
+    void onTreeItemClicked(QTreeWidgetItem *item, int column);
     void onTreeItemChanged(QTreeWidgetItem *item, int column);
+    void onCurrentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
 
-void copyDirectoryTree();
+    void copyDirectoryTree();
     void copyFileContent();
     void copyFullContext();
 
@@ -38,7 +39,7 @@ private:
     QString currentRootDir;
     QString contentTemplate;
 
-void populateTree(const QString &path, QTreeWidgetItem *parentItem);
+    void populateTree(const QString &path, QTreeWidgetItem *parentItem);
     void setAllChildCheckState(QTreeWidgetItem *item, Qt::CheckState state);
     void updateFileList(QTreeWidgetItem *item);
     QString generateAsciiTree(const QString &path, const QString &prefix);
