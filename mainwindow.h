@@ -4,6 +4,8 @@
 #include <QMainWindow>
 #include <QTreeWidget>
 #include <QFileSystemModel>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -18,7 +20,6 @@ public:
     ~MainWindow();
 
 private slots:
-
     void openFolder();
     void openTemplateOptions();
     void showAbout();
@@ -34,10 +35,16 @@ private slots:
     void copyFileContent();
     void copyFullContext();
 
+    void checkUpdate();
+    void onUpdateResult(QNetworkReply *reply);
+
 private:
     Ui::MainWindow *ui;
     QString currentRootDir;
     QString contentTemplate;
+
+    QNetworkAccessManager *netManager;
+    const QString currentVersion = "v0.2.0";
 
     void populateTree(const QString &path, QTreeWidgetItem *parentItem);
     void setAllChildCheckState(QTreeWidgetItem *item, Qt::CheckState state);

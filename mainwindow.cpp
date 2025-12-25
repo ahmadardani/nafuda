@@ -12,6 +12,11 @@
 #include <QTimer>
 #include <QFileInfo>
 #include <QSettings>
+#include <QNetworkRequest>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QDesktopServices>
+#include <QUrl>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -42,6 +47,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionOpenFolder, &QAction::triggered, this, &MainWindow::openFolder);
     connect(ui->actionTemplateSettings, &QAction::triggered, this, &MainWindow::openTemplateOptions);
     connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::showAbout);
+    connect(ui->actionCheckUpdates, &QAction::triggered, this, &MainWindow::checkUpdate);
     connect(ui->actionExit, &QAction::triggered, qApp, &QApplication::quit);
 
     connect(ui->treeWidget, &QTreeWidget::itemClicked, this, &MainWindow::onTreeItemClicked);
@@ -51,6 +57,9 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnCopyTree, &QPushButton::clicked, this, &MainWindow::copyDirectoryTree);
     connect(ui->btnCopyContent, &QPushButton::clicked, this, &MainWindow::copyFileContent);
     connect(ui->btnCopyFull, &QPushButton::clicked, this, &MainWindow::copyFullContext);
+
+    netManager = new QNetworkAccessManager(this);
+    connect(netManager, &QNetworkAccessManager::finished, this, &MainWindow::onUpdateResult);
 }
 
 MainWindow::~MainWindow() { delete ui; }
@@ -286,11 +295,11 @@ void MainWindow::showAbout()
 
     QString aboutText =
         "<h3 style='margin-bottom: 0px;'>Nafuda</h3>"
-        "<p style='color: #666;'>Version 0.2.0</p>"
-        "<p>A lightweight tool for copying project structure and providing code context for LLMs.</p>"
-        "<p>Developed with Qt & C++.</p>"
-        "<p><a href=\"https://github.com/ahmadardani/nafuda\">GitHub Repository</a></p>"
-        "<p style='font-size: small;'>&copy; 2025 Ahmad Ardani</p>";
+        "<p style='color: #666;'>Version " + currentVersion + "</p>"
+                           "<p>A lightweight tool for copying project structure and providing code context for LLMs.</p>"
+                           "<p>Developed with Qt & C++.</p>"
+                           "<p><a href=\"https://github.com/ahmadardani/nafuda\">GitHub Repository</a></p>"
+                           "<p style='font-size: small;'>&copy; 2025 Ahmad Ardani</p>";
 
     msgBox.setText(aboutText);
 
@@ -300,4 +309,51 @@ void MainWindow::showAbout()
     }
 
     msgBox.exec();
+}
+
+void MainWindow::checkUpdate() {
+    QNetworkRequest req(QUrl("https://api.github.com/repos/ahmadardani/nafuda/releases/latest"));
+    req.setHeader(QNetworkRequest::UserAgentHeader, "NafudaApp");
+    netManager->get(req);
+}
+
+void MainWindow::onUpdateResult(QNetworkReply *reply) {
+    if (reply->error() == QNetworkReply::NoError) {
+        QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
+        QJsonObject obj = doc.object();
+        QString remoteVersion = obj["tag_name"].toString();
+
+        if (!remoteVersion.isEmpty()) {
+
+            QString cleanRemote = remoteVersion;
+            if (cleanRemote.startsWith("v") || cleanRemote.startsWith("V")) {
+                cleanRemote.remove(0, 1);
+            }
+
+            QString cleanLocal = currentVersion;
+            if (cleanLocal.startsWith("v") || cleanLocal.startsWith("V")) {
+                cleanLocal.remove(0, 1);
+            }
+
+            if (cleanRemote != cleanLocal) {
+                QMessageBox msgBox;
+                msgBox.setWindowTitle("Update Available");
+                msgBox.setText("<b>New Version Available!</b>");
+                msgBox.setInformativeText("Version " + remoteVersion + " is available. Would you like to download it now?");
+                msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+                msgBox.setDefaultButton(QMessageBox::Yes);
+                msgBox.setIcon(QMessageBox::Information);
+
+                if (msgBox.exec() == QMessageBox::Yes) {
+                    QDesktopServices::openUrl(QUrl("https://github.com/ahmadardani/nafuda/releases/latest"));
+                }
+            } else {
+                QMessageBox::information(this, "No Updates",
+                                         "You are using the latest version (" + currentVersion + ").");
+            }
+        }
+    } else {
+        QMessageBox::warning(this, "Check Failed", "Could not check for updates.\nPlease check your internet connection.");
+    }
+    reply->deleteLater();
 }
