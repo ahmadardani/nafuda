@@ -44,7 +44,7 @@ private:
     QString contentTemplate;
 
     QNetworkAccessManager *netManager;
-    const QString currentVersion = "v0.2.0";
+    const QString currentVersion = "v0.3.0";
 
     void populateTree(const QString &path, QTreeWidgetItem *parentItem);
     void setAllChildCheckState(QTreeWidgetItem *item, Qt::CheckState state);
