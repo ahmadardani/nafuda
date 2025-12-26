@@ -17,6 +17,12 @@
 #include <QJsonObject>
 #include <QDesktopServices>
 #include <QUrl>
+#include <QDialog>
+#include <QVBoxLayout>
+#include <QDialogButtonBox>
+#include <QPlainTextEdit>
+#include <QPushButton>
+#include <QLabel>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -38,7 +44,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->splitter->setStretchFactor(2, 1);
 
     QSettings settings("Nafuda", "Settings");
-    contentTemplate = settings.value("template", "File: {name}\n```\n{code}\n```\n").toString();
+    contentTemplate = settings.value("template", defaultTemplate).toString();
 
     connect(ui->btnWelcomeOpen, &QPushButton::clicked, this, &MainWindow::openFolder);
     connect(ui->btnSelectAll, &QPushButton::clicked, this, &MainWindow::selectAllFiles);
@@ -277,12 +283,33 @@ void MainWindow::copyFileContent() {
 }
 
 void MainWindow::openTemplateOptions() {
-    bool ok;
-    QString t = QInputDialog::getMultiLineText(this, "Template", "Format ({name}, {code}):", contentTemplate, &ok);
-    if (ok && !t.isEmpty()) {
-        contentTemplate = t;
-        QSettings settings("Nafuda", "Settings");
-        settings.setValue("template", contentTemplate);
+    QDialog dlg(this);
+    dlg.setWindowTitle("Template Settings");
+    dlg.resize(400, 300);
+
+    QVBoxLayout *layout = new QVBoxLayout(&dlg);
+    layout->addWidget(new QLabel("Format ({name}, {code}):", &dlg));
+
+    QPlainTextEdit *edit = new QPlainTextEdit(&dlg);
+    edit->setPlainText(contentTemplate);
+    layout->addWidget(edit);
+
+    QDialogButtonBox *btnBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel | QDialogButtonBox::RestoreDefaults, &dlg);
+    layout->addWidget(btnBox);
+
+    connect(btnBox, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(btnBox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    connect(btnBox->button(QDialogButtonBox::RestoreDefaults), &QPushButton::clicked, [this, edit](){
+        edit->setPlainText(defaultTemplate);
+    });
+
+    if (dlg.exec() == QDialog::Accepted) {
+        QString t = edit->toPlainText();
+        if (!t.isEmpty()) {
+            contentTemplate = t;
+            QSettings settings("Nafuda", "Settings");
+            settings.setValue("template", contentTemplate);
+        }
     }
 }
 

@@ -42,6 +42,7 @@ private:
     Ui::MainWindow *ui;
     QString currentRootDir;
     QString contentTemplate;
+    const QString defaultTemplate = "File: {name}\n```\n{code}\n```\n";
 
     QNetworkAccessManager *netManager;
     const QString currentVersion = "v0.3.0";
