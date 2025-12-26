@@ -45,6 +45,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     QSettings settings("Nafuda", "Settings");
     contentTemplate = settings.value("template", defaultTemplate).toString();
+    recentFiles = settings.value("recentFiles").toStringList();
+    updateRecentMenu();
 
     connect(ui->btnWelcomeOpen, &QPushButton::clicked, this, &MainWindow::openFolder);
     connect(ui->btnSelectAll, &QPushButton::clicked, this, &MainWindow::selectAllFiles);
@@ -55,6 +57,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::showAbout);
     connect(ui->actionCheckUpdates, &QAction::triggered, this, &MainWindow::checkUpdate);
     connect(ui->actionExit, &QAction::triggered, qApp, &QApplication::quit);
+    connect(ui->actionClearRecent, &QAction::triggered, this, &MainWindow::clearRecentList);
 
     connect(ui->treeWidget, &QTreeWidget::itemClicked, this, &MainWindow::onTreeItemClicked);
     connect(ui->treeWidget, &QTreeWidget::itemChanged, this, &MainWindow::onTreeItemChanged);
@@ -120,23 +123,83 @@ void MainWindow::deselectAllFiles() {
 void MainWindow::openFolder() {
     QString dir = QFileDialog::getExistingDirectory(this, "Open Directory", QDir::homePath());
     if (!dir.isEmpty()) {
-        currentRootDir = dir;
-        ui->stackedWidget->setCurrentIndex(1);
-        ui->treeWidget->clear();
-        ui->selectedListWidget->clear();
-        ui->lblStatus->clear();
-        ui->codeViewer->clear();
-        ui->lblFileInfo->setText("Select a file to preview info");
-
-        QTreeWidgetItem *rootItem = new QTreeWidgetItem(ui->treeWidget);
-        rootItem->setText(0, QDir(dir).dirName());
-        rootItem->setIcon(0, QApplication::style()->standardIcon(QStyle::SP_DirIcon));
-        rootItem->setData(0, Qt::UserRole, dir);
-        rootItem->setCheckState(0, Qt::Unchecked);
-
-        populateTree(dir, rootItem);
-        ui->treeWidget->expandItem(rootItem);
+        loadProject(dir);
     }
+}
+
+void MainWindow::loadProject(const QString &path) {
+    currentRootDir = path;
+    addToRecent(path);
+
+    ui->stackedWidget->setCurrentIndex(1);
+    ui->treeWidget->clear();
+    ui->selectedListWidget->clear();
+    ui->lblStatus->clear();
+    ui->codeViewer->clear();
+    ui->lblFileInfo->setText("Select a file to preview info");
+
+    QTreeWidgetItem *rootItem = new QTreeWidgetItem(ui->treeWidget);
+    rootItem->setText(0, QDir(path).dirName());
+    rootItem->setIcon(0, QApplication::style()->standardIcon(QStyle::SP_DirIcon));
+    rootItem->setData(0, Qt::UserRole, path);
+    rootItem->setCheckState(0, Qt::Unchecked);
+
+    populateTree(path, rootItem);
+    ui->treeWidget->expandItem(rootItem);
+}
+
+void MainWindow::addToRecent(const QString &path) {
+    recentFiles.removeAll(path);
+    recentFiles.prepend(path);
+
+    while (recentFiles.size() > maxRecentFiles) {
+        recentFiles.removeLast();
+    }
+
+    QSettings settings("Nafuda", "Settings");
+    settings.setValue("recentFiles", recentFiles);
+    updateRecentMenu();
+}
+
+void MainWindow::updateRecentMenu() {
+    ui->menuOpenRecent->clear();
+
+    if (recentFiles.isEmpty()) {
+        QAction *emptyAction = ui->menuOpenRecent->addAction("No Recent Projects");
+        emptyAction->setEnabled(false);
+    } else {
+        for (const QString &path : recentFiles) {
+            QAction *action = ui->menuOpenRecent->addAction(path);
+            action->setData(path);
+            connect(action, &QAction::triggered, this, &MainWindow::openRecentProject);
+        }
+    }
+
+    ui->menuOpenRecent->addSeparator();
+    ui->menuOpenRecent->addAction(ui->actionClearRecent);
+}
+
+void MainWindow::openRecentProject() {
+    QAction *action = qobject_cast<QAction *>(sender());
+    if (action) {
+        QString path = action->data().toString();
+        if (QDir(path).exists()) {
+            loadProject(path);
+        } else {
+            QMessageBox::warning(this, "Error", "Directory does not exist anymore.");
+            recentFiles.removeAll(path);
+            QSettings settings("Nafuda", "Settings");
+            settings.setValue("recentFiles", recentFiles);
+            updateRecentMenu();
+        }
+    }
+}
+
+void MainWindow::clearRecentList() {
+    recentFiles.clear();
+    QSettings settings("Nafuda", "Settings");
+    settings.setValue("recentFiles", recentFiles);
+    updateRecentMenu();
 }
 
 void MainWindow::populateTree(const QString &path, QTreeWidgetItem *parentItem) {

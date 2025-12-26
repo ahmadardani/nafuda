@@ -38,11 +38,17 @@ private slots:
     void checkUpdate();
     void onUpdateResult(QNetworkReply *reply);
 
+    void openRecentProject();
+    void clearRecentList();
+
 private:
     Ui::MainWindow *ui;
     QString currentRootDir;
     QString contentTemplate;
     const QString defaultTemplate = "File: {name}\n```\n{code}\n```\n";
+
+    QStringList recentFiles;
+    const int maxRecentFiles = 10;
 
     QNetworkAccessManager *netManager;
     const QString currentVersion = "v0.3.0";
@@ -51,6 +57,10 @@ private:
     void setAllChildCheckState(QTreeWidgetItem *item, Qt::CheckState state);
     void updateFileList(QTreeWidgetItem *item);
     QString generateAsciiTree(const QString &path, const QString &prefix);
+
+    void loadProject(const QString &path);
+    void addToRecent(const QString &path);
+    void updateRecentMenu();
 };
 
 #endif

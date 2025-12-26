@@ -315,7 +315,13 @@
     <property name="title">
      <string>File</string>
     </property>
+    <widget class="QMenu" name="menuOpenRecent">
+     <property name="title">
+      <string>Open Recent</string>
+     </property>
+    </widget>
     <addaction name="actionOpenFolder"/>
+    <addaction name="menuOpenRecent"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
@@ -366,6 +372,11 @@
   <action name="actionCheckUpdates">
    <property name="text">
     <string>Check for Updates...</string>
+   </property>
+  </action>
+  <action name="actionClearRecent">
+   <property name="text">
+    <string>Clear Recent</string>
    </property>
   </action>
  </widget>
