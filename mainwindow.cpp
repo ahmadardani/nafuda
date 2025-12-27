@@ -31,9 +31,16 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     setWindowIcon(QIcon(":/app_icon.png"));
+    setWindowTitle("Nafuda");
     ui->stackedWidget->setCurrentIndex(0);
     ui->selectedListWidget->setFrameShape(QFrame::NoFrame);
     ui->lblStatus->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+
+    // --- SETUP LABEL PERMANEN DI STATUS BAR ---
+    statusPathLabel = new QLabel(this);
+    statusPathLabel->setStyleSheet("padding-left: 5px; color: #555;"); // Sedikit styling biar rapi
+    ui->statusbar->addWidget(statusPathLabel); // Pasang di status bar (sebelah kiri)
+    // ------------------------------------------
 
     QList<int> sizes;
     sizes << 300 << 600 << 300;
@@ -73,6 +80,38 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow() { delete ui; }
 
+// ... (Kode lain tidak berubah) ...
+
+void MainWindow::loadProject(const QString &path) {
+    currentRootDir = path;
+    addToRecent(path);
+
+    QDir dir(path);
+    setWindowTitle(dir.dirName() + " - Nafuda");
+
+    // --- GANTI showMessage JADI setText ---
+    // Ini akan permanen selamanya sampai aplikasi ditutup
+    statusPathLabel->setText("Loaded: " + path);
+    // --------------------------------------
+
+    ui->stackedWidget->setCurrentIndex(1);
+    ui->treeWidget->clear();
+    ui->selectedListWidget->clear();
+    ui->lblStatus->clear();
+    ui->codeViewer->clear();
+    ui->lblFileInfo->setText("Select a file to preview info");
+
+    QTreeWidgetItem *rootItem = new QTreeWidgetItem(ui->treeWidget);
+    rootItem->setText(0, dir.dirName());
+    rootItem->setIcon(0, QApplication::style()->standardIcon(QStyle::SP_DirIcon));
+    rootItem->setData(0, Qt::UserRole, path);
+    rootItem->setCheckState(0, Qt::Unchecked);
+
+    populateTree(path, rootItem);
+    ui->treeWidget->expandItem(rootItem);
+}
+
+// ... (Sisa kode ke bawah sama persis, tidak perlu diubah) ...
 void MainWindow::setAllChildCheckState(QTreeWidgetItem *item, Qt::CheckState state) {
     for (int i = 0; i < item->childCount(); ++i) {
         QTreeWidgetItem *child = item->child(i);
@@ -125,27 +164,6 @@ void MainWindow::openFolder() {
     if (!dir.isEmpty()) {
         loadProject(dir);
     }
-}
-
-void MainWindow::loadProject(const QString &path) {
-    currentRootDir = path;
-    addToRecent(path);
-
-    ui->stackedWidget->setCurrentIndex(1);
-    ui->treeWidget->clear();
-    ui->selectedListWidget->clear();
-    ui->lblStatus->clear();
-    ui->codeViewer->clear();
-    ui->lblFileInfo->setText("Select a file to preview info");
-
-    QTreeWidgetItem *rootItem = new QTreeWidgetItem(ui->treeWidget);
-    rootItem->setText(0, QDir(path).dirName());
-    rootItem->setIcon(0, QApplication::style()->standardIcon(QStyle::SP_DirIcon));
-    rootItem->setData(0, Qt::UserRole, path);
-    rootItem->setCheckState(0, Qt::Unchecked);
-
-    populateTree(path, rootItem);
-    ui->treeWidget->expandItem(rootItem);
 }
 
 void MainWindow::addToRecent(const QString &path) {

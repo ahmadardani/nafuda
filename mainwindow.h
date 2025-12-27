@@ -6,6 +6,7 @@
 #include <QFileSystemModel>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QLabel> // Tambah ini
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -46,6 +47,10 @@ private:
     QString currentRootDir;
     QString contentTemplate;
     const QString defaultTemplate = "File: {name}\n```\n{code}\n```\n";
+
+    // --- TAMBAHAN VARIABEL LABEL ---
+    QLabel *statusPathLabel;
+    // -------------------------------
 
     QStringList recentFiles;
     const int maxRecentFiles = 10;
