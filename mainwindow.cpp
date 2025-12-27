@@ -36,11 +36,9 @@ MainWindow::MainWindow(QWidget *parent)
     ui->selectedListWidget->setFrameShape(QFrame::NoFrame);
     ui->lblStatus->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
-    // --- SETUP LABEL PERMANEN DI STATUS BAR ---
     statusPathLabel = new QLabel(this);
-    statusPathLabel->setStyleSheet("padding-left: 5px; color: #555;"); // Sedikit styling biar rapi
-    ui->statusbar->addWidget(statusPathLabel); // Pasang di status bar (sebelah kiri)
-    // ------------------------------------------
+    statusPathLabel->setStyleSheet("padding-left: 5px; color: #555;");
+    ui->statusbar->addWidget(statusPathLabel);
 
     QList<int> sizes;
     sizes << 300 << 600 << 300;
@@ -50,12 +48,17 @@ MainWindow::MainWindow(QWidget *parent)
     ui->splitter->setStretchFactor(1, 2);
     ui->splitter->setStretchFactor(2, 1);
 
+    ui->listWelcomeRecent->setFocusPolicy(Qt::NoFocus);
+    ui->listWelcomeRecent->setCursor(Qt::PointingHandCursor);
+
     QSettings settings("Nafuda", "Settings");
     contentTemplate = settings.value("template", defaultTemplate).toString();
     recentFiles = settings.value("recentFiles").toStringList();
     updateRecentMenu();
 
     connect(ui->btnWelcomeOpen, &QPushButton::clicked, this, &MainWindow::openFolder);
+    connect(ui->listWelcomeRecent, &QListWidget::itemClicked, this, &MainWindow::onWelcomeListClicked);
+
     connect(ui->btnSelectAll, &QPushButton::clicked, this, &MainWindow::selectAllFiles);
     connect(ui->btnDeselectAll, &QPushButton::clicked, this, &MainWindow::deselectAllFiles);
 
@@ -80,38 +83,6 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow() { delete ui; }
 
-// ... (Kode lain tidak berubah) ...
-
-void MainWindow::loadProject(const QString &path) {
-    currentRootDir = path;
-    addToRecent(path);
-
-    QDir dir(path);
-    setWindowTitle(dir.dirName() + " - Nafuda");
-
-    // --- GANTI showMessage JADI setText ---
-    // Ini akan permanen selamanya sampai aplikasi ditutup
-    statusPathLabel->setText("Loaded: " + path);
-    // --------------------------------------
-
-    ui->stackedWidget->setCurrentIndex(1);
-    ui->treeWidget->clear();
-    ui->selectedListWidget->clear();
-    ui->lblStatus->clear();
-    ui->codeViewer->clear();
-    ui->lblFileInfo->setText("Select a file to preview info");
-
-    QTreeWidgetItem *rootItem = new QTreeWidgetItem(ui->treeWidget);
-    rootItem->setText(0, dir.dirName());
-    rootItem->setIcon(0, QApplication::style()->standardIcon(QStyle::SP_DirIcon));
-    rootItem->setData(0, Qt::UserRole, path);
-    rootItem->setCheckState(0, Qt::Unchecked);
-
-    populateTree(path, rootItem);
-    ui->treeWidget->expandItem(rootItem);
-}
-
-// ... (Sisa kode ke bawah sama persis, tidak perlu diubah) ...
 void MainWindow::setAllChildCheckState(QTreeWidgetItem *item, Qt::CheckState state) {
     for (int i = 0; i < item->childCount(); ++i) {
         QTreeWidgetItem *child = item->child(i);
@@ -166,9 +137,43 @@ void MainWindow::openFolder() {
     }
 }
 
+void MainWindow::loadProject(const QString &path) {
+    currentRootDir = path;
+    addToRecent(path);
+
+    QDir dir(path);
+    setWindowTitle(dir.dirName() + " - Nafuda");
+    statusPathLabel->setText("Loaded: " + path);
+
+    ui->stackedWidget->setCurrentIndex(1);
+    ui->treeWidget->clear();
+    ui->selectedListWidget->clear();
+    ui->lblStatus->clear();
+    ui->codeViewer->clear();
+    ui->lblFileInfo->setText("Select a file to preview info");
+
+    QTreeWidgetItem *rootItem = new QTreeWidgetItem(ui->treeWidget);
+    rootItem->setText(0, dir.dirName());
+    rootItem->setIcon(0, QApplication::style()->standardIcon(QStyle::SP_DirIcon));
+    rootItem->setData(0, Qt::UserRole, path);
+    rootItem->setCheckState(0, Qt::Unchecked);
+
+    populateTree(path, rootItem);
+    ui->treeWidget->expandItem(rootItem);
+}
+
 void MainWindow::addToRecent(const QString &path) {
-    recentFiles.removeAll(path);
-    recentFiles.prepend(path);
+    for (int i = 0; i < recentFiles.size(); ++i) {
+        QString entry = recentFiles[i];
+        QString entryPath = entry.split('|').first();
+        if (entryPath == path) {
+            recentFiles.removeAt(i);
+            break;
+        }
+    }
+
+    QString timestamp = QDateTime::currentDateTime().toString(Qt::ISODate);
+    recentFiles.prepend(path + "|" + timestamp);
 
     while (recentFiles.size() > maxRecentFiles) {
         recentFiles.removeLast();
@@ -179,17 +184,55 @@ void MainWindow::addToRecent(const QString &path) {
     updateRecentMenu();
 }
 
+QString MainWindow::getRelativeTime(const QDateTime &dt) {
+    qint64 diff = dt.secsTo(QDateTime::currentDateTime());
+
+    if (diff < 60) return "Just now";
+    if (diff < 3600) return QString("%1 mins ago").arg(diff / 60);
+    if (diff < 86400) return QString("%1 hours ago").arg(diff / 3600);
+    if (diff < 172800) return "Yesterday";
+    return dt.toString("dd MMM yyyy");
+}
+
 void MainWindow::updateRecentMenu() {
     ui->menuOpenRecent->clear();
+    ui->listWelcomeRecent->clear();
 
     if (recentFiles.isEmpty()) {
         QAction *emptyAction = ui->menuOpenRecent->addAction("No Recent Projects");
         emptyAction->setEnabled(false);
+
+        ui->listWelcomeRecent->hide();
+        ui->lblRecentTitle->hide();
     } else {
-        for (const QString &path : recentFiles) {
+        ui->listWelcomeRecent->show();
+        ui->lblRecentTitle->show();
+
+        for (const QString &entry : recentFiles) {
+            QStringList parts = entry.split('|');
+            QString path = parts.first();
+            QString timeStr = parts.value(1);
+            QString relativeTime = "";
+
+            if (!timeStr.isEmpty()) {
+                QDateTime dt = QDateTime::fromString(timeStr, Qt::ISODate);
+                relativeTime = getRelativeTime(dt);
+            }
+
             QAction *action = ui->menuOpenRecent->addAction(path);
             action->setData(path);
             connect(action, &QAction::triggered, this, &MainWindow::openRecentProject);
+
+            QListWidgetItem *item = new QListWidgetItem();
+            QString displayText = QDir(path).dirName();
+            if (!relativeTime.isEmpty()) {
+                displayText += "\n" + relativeTime;
+            }
+            item->setText(displayText);
+            item->setToolTip(path);
+            item->setData(Qt::UserRole, path);
+            item->setIcon(QApplication::style()->standardIcon(QStyle::SP_DirIcon));
+            ui->listWelcomeRecent->addItem(item);
         }
     }
 
@@ -205,11 +248,34 @@ void MainWindow::openRecentProject() {
             loadProject(path);
         } else {
             QMessageBox::warning(this, "Error", "Directory does not exist anymore.");
-            recentFiles.removeAll(path);
+            for(int i=0; i<recentFiles.size(); ++i) {
+                if(recentFiles[i].startsWith(path + "|") || recentFiles[i] == path) {
+                    recentFiles.removeAt(i);
+                    break;
+                }
+            }
             QSettings settings("Nafuda", "Settings");
             settings.setValue("recentFiles", recentFiles);
             updateRecentMenu();
         }
+    }
+}
+
+void MainWindow::onWelcomeListClicked(QListWidgetItem *item) {
+    QString path = item->data(Qt::UserRole).toString();
+    if (QDir(path).exists()) {
+        loadProject(path);
+    } else {
+        QMessageBox::warning(this, "Error", "Directory does not exist anymore.");
+        for(int i=0; i<recentFiles.size(); ++i) {
+            if(recentFiles[i].startsWith(path + "|") || recentFiles[i] == path) {
+                recentFiles.removeAt(i);
+                break;
+            }
+        }
+        QSettings settings("Nafuda", "Settings");
+        settings.setValue("recentFiles", recentFiles);
+        updateRecentMenu();
     }
 }
 

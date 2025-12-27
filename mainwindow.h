@@ -3,10 +3,12 @@
 
 #include <QMainWindow>
 #include <QTreeWidget>
+#include <QListWidget>
 #include <QFileSystemModel>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
-#include <QLabel> // Tambah ini
+#include <QLabel>
+#include <QDateTime>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -40,6 +42,7 @@ private slots:
     void onUpdateResult(QNetworkReply *reply);
 
     void openRecentProject();
+    void onWelcomeListClicked(QListWidgetItem *item);
     void clearRecentList();
 
 private:
@@ -48,11 +51,9 @@ private:
     QString contentTemplate;
     const QString defaultTemplate = "File: {name}\n```\n{code}\n```\n";
 
-    // --- TAMBAHAN VARIABEL LABEL ---
     QLabel *statusPathLabel;
-    // -------------------------------
 
-    QStringList recentFiles;
+    QStringList recentFiles; // Format: "Path|Timestamp"
     const int maxRecentFiles = 10;
 
     QNetworkAccessManager *netManager;
@@ -66,6 +67,7 @@ private:
     void loadProject(const QString &path);
     void addToRecent(const QString &path);
     void updateRecentMenu();
+    QString getRelativeTime(const QDateTime &dt);
 };
 
 #endif
