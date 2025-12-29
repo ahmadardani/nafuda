@@ -53,11 +53,11 @@ private:
 
     QLabel *statusPathLabel;
 
-    QStringList recentFiles; // Format: "Path|Timestamp"
+    QStringList recentFiles;
     const int maxRecentFiles = 10;
 
     QNetworkAccessManager *netManager;
-    const QString currentVersion = "v0.3.0";
+    const QString currentVersion = "v0.4.0";
 
     void populateTree(const QString &path, QTreeWidgetItem *parentItem);
     void setAllChildCheckState(QTreeWidgetItem *item, Qt::CheckState state);
