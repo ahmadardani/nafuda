@@ -39,3 +39,15 @@ Nafuda works with any text-based codebase, including:
 - Sharing project architecture during code reviews or team discussions  
 - Isolating specific parts of a large project for documentation
 - Helping LLMs understand how files work together to fix bugs
+
+## Build
+
+```
+rm -rf build
+mkdir build && cd build
+
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make -j$(nproc)
+
+cpack -G DEB
+```
