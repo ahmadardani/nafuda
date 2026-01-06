@@ -19,10 +19,15 @@
 #include <QUrl>
 #include <QDialog>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QDialogButtonBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QLabel>
+#include <QComboBox>
+#include <QToolButton>
+#include <QMap>
+#include <QStyle>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -52,9 +57,28 @@ MainWindow::MainWindow(QWidget *parent)
     ui->listWelcomeRecent->setCursor(Qt::PointingHandCursor);
 
     QSettings settings("Nafuda", "Settings");
-    contentTemplate = settings.value("template", defaultTemplate).toString();
     recentFiles = settings.value("recentFiles").toStringList();
     updateRecentMenu();
+
+    settings.beginGroup("Presets");
+    QStringList keys = settings.childKeys();
+    if (keys.isEmpty()) {
+        settings.endGroup();
+        QString oldTemplate = settings.value("template").toString();
+        if (oldTemplate.isEmpty()) oldTemplate = defaultTemplate;
+        presets.insert("Default", oldTemplate);
+        currentPresetName = "Default";
+    } else {
+        for (const QString &key : keys) {
+            presets.insert(key, settings.value(key).toString());
+        }
+        settings.endGroup();
+        currentPresetName = settings.value("currentPresetName", "Default").toString();
+        if (!presets.contains(currentPresetName) && !presets.isEmpty()) {
+            currentPresetName = presets.firstKey();
+        }
+    }
+    contentTemplate = presets.value(currentPresetName, defaultTemplate);
 
     connect(ui->btnWelcomeOpen, &QPushButton::clicked, this, &MainWindow::openFolder);
     connect(ui->listWelcomeRecent, &QListWidget::itemClicked, this, &MainWindow::onWelcomeListClicked);
@@ -311,7 +335,6 @@ void MainWindow::onTreeItemClicked(QTreeWidgetItem *item, int column) {
     QFileInfo info(path);
 
     if (info.isFile()) {
-
         double sizeInKB = info.size() / 1024.0;
         QString fileInfoText = QString("<b>File:</b> %1 &nbsp;&nbsp;|&nbsp;&nbsp; <b>Size:</b> %2 KB &nbsp;&nbsp;|&nbsp;&nbsp; <b>Format:</b> %3")
                                    .arg(info.fileName())
@@ -326,7 +349,6 @@ void MainWindow::onTreeItemClicked(QTreeWidgetItem *item, int column) {
             ui->codeViewer->setText(file.readAll());
         }
     } else {
-
         ui->lblFileInfo->setText("Folder: " + info.fileName());
         ui->codeViewer->clear();
     }
@@ -432,31 +454,126 @@ void MainWindow::copyFileContent() {
 void MainWindow::openTemplateOptions() {
     QDialog dlg(this);
     dlg.setWindowTitle("Template Settings");
-    dlg.resize(400, 300);
+    dlg.resize(450, 400);
 
-    QVBoxLayout *layout = new QVBoxLayout(&dlg);
-    layout->addWidget(new QLabel("Format ({name}, {code}):", &dlg));
+    QVBoxLayout *mainLayout = new QVBoxLayout(&dlg);
+
+    QHBoxLayout *topLayout = new QHBoxLayout();
+    QComboBox *cmbPresets = new QComboBox(&dlg);
+    cmbPresets->addItems(presets.keys());
+    cmbPresets->setCurrentText(currentPresetName);
+
+    QToolButton *btnAdd = new QToolButton(&dlg);
+    btnAdd->setText("+");
+    btnAdd->setToolTip("Create New Preset");
+
+    QToolButton *btnRename = new QToolButton(&dlg);
+    btnRename->setText(QString::fromUtf8("\u270E")); // Pencil unicode symbol
+    btnRename->setToolTip("Rename Preset");
+
+    QToolButton *btnDel = new QToolButton(&dlg);
+    btnDel->setIcon(qApp->style()->standardIcon(QStyle::SP_TrashIcon));
+    btnDel->setToolTip("Delete Selected Preset");
+
+    topLayout->addWidget(new QLabel("Preset:"));
+    topLayout->addWidget(cmbPresets, 1);
+    topLayout->addWidget(btnAdd);
+    topLayout->addWidget(btnRename);
+    topLayout->addWidget(btnDel);
+    mainLayout->addLayout(topLayout);
+
+    mainLayout->addWidget(new QLabel("Template Content ({name}, {code}):", &dlg));
 
     QPlainTextEdit *edit = new QPlainTextEdit(&dlg);
-    edit->setPlainText(contentTemplate);
-    layout->addWidget(edit);
+    QMap<QString, QString> tempPresets = presets;
+    edit->setPlainText(tempPresets.value(currentPresetName, defaultTemplate));
+    mainLayout->addWidget(edit);
 
-    QDialogButtonBox *btnBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel | QDialogButtonBox::RestoreDefaults, &dlg);
-    layout->addWidget(btnBox);
+    connect(cmbPresets, &QComboBox::currentTextChanged, [&, edit](const QString &text){
+        if (!text.isEmpty()) {
+            edit->setPlainText(tempPresets.value(text, defaultTemplate));
+        }
+    });
 
-    connect(btnBox, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
-    connect(btnBox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
-    connect(btnBox->button(QDialogButtonBox::RestoreDefaults), &QPushButton::clicked, [this, edit](){
+    connect(edit, &QPlainTextEdit::textChanged, [&, edit, cmbPresets](){
+        tempPresets[cmbPresets->currentText()] = edit->toPlainText();
+    });
+
+    connect(btnAdd, &QToolButton::clicked, [&, cmbPresets, edit](){
+        bool ok;
+        QString text = QInputDialog::getText(&dlg, "New Preset", "Preset Name:", QLineEdit::Normal, "", &ok);
+        if (ok && !text.isEmpty()) {
+            if (tempPresets.contains(text)) {
+                QMessageBox::warning(&dlg, "Error", "Preset name already exists.");
+                return;
+            }
+            tempPresets.insert(text, defaultTemplate);
+            cmbPresets->addItem(text);
+            cmbPresets->setCurrentText(text);
+        }
+    });
+
+    connect(btnRename, &QToolButton::clicked, [&, cmbPresets](){
+        QString currentName = cmbPresets->currentText();
+        bool ok;
+        QString text = QInputDialog::getText(&dlg, "Rename Preset", "New Name:", QLineEdit::Normal, currentName, &ok);
+        if (ok && !text.isEmpty() && text != currentName) {
+            if (tempPresets.contains(text)) {
+                QMessageBox::warning(&dlg, "Error", "Preset name already exists.");
+                return;
+            }
+            QString content = tempPresets.take(currentName);
+            tempPresets.insert(text, content);
+
+            int idx = cmbPresets->currentIndex();
+            cmbPresets->setItemText(idx, text);
+            // QComboBox automatically updates current text if index stays, but explicitly:
+            // cmbPresets->setCurrentText(text); // Usually not needed if index matches
+        }
+    });
+
+    connect(btnDel, &QToolButton::clicked, [&, cmbPresets](){
+        if (cmbPresets->count() <= 1) {
+            QMessageBox::warning(&dlg, "Warning", "Cannot delete the last preset.");
+            return;
+        }
+        QString toRemove = cmbPresets->currentText();
+        int ret = QMessageBox::question(&dlg, "Delete Preset", "Delete preset '" + toRemove + "'?", QMessageBox::Yes | QMessageBox::No);
+        if (ret == QMessageBox::Yes) {
+            tempPresets.remove(toRemove);
+            cmbPresets->removeItem(cmbPresets->currentIndex());
+        }
+    });
+
+    QHBoxLayout *bottomLayout = new QHBoxLayout();
+    QPushButton *btnRestoreContent = new QPushButton("Restore Default Content", &dlg);
+    QDialogButtonBox *btnBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+
+    bottomLayout->addWidget(btnRestoreContent);
+    bottomLayout->addStretch();
+    bottomLayout->addWidget(btnBox);
+    mainLayout->addLayout(bottomLayout);
+
+    connect(btnRestoreContent, &QPushButton::clicked, [edit, this](){
         edit->setPlainText(defaultTemplate);
     });
 
+    connect(btnBox, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(btnBox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
     if (dlg.exec() == QDialog::Accepted) {
-        QString t = edit->toPlainText();
-        if (!t.isEmpty()) {
-            contentTemplate = t;
-            QSettings settings("Nafuda", "Settings");
-            settings.setValue("template", contentTemplate);
+        presets = tempPresets;
+        currentPresetName = cmbPresets->currentText();
+        contentTemplate = presets.value(currentPresetName, defaultTemplate);
+
+        QSettings settings("Nafuda", "Settings");
+        settings.beginGroup("Presets");
+        settings.remove("");
+        for(auto it = presets.begin(); it != presets.end(); ++it) {
+            settings.setValue(it.key(), it.value());
         }
+        settings.endGroup();
+        settings.setValue("currentPresetName", currentPresetName);
     }
 }
 

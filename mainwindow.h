@@ -9,6 +9,7 @@
 #include <QNetworkReply>
 #include <QLabel>
 #include <QDateTime>
+#include <QMap>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -50,6 +51,9 @@ private:
     QString currentRootDir;
     QString contentTemplate;
     const QString defaultTemplate = "File: {name}\n```\n{code}\n```\n";
+
+    QMap<QString, QString> presets;
+    QString currentPresetName;
 
     QLabel *statusPathLabel;
 
