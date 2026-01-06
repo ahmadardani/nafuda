@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(Nafuda VERSION 0.4.0 LANGUAGES CXX)
+project(Nafuda VERSION 0.5.0 LANGUAGES CXX)
 
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
@@ -81,7 +81,7 @@ install(FILES app_icon.png
 )
 
 set(CPACK_PACKAGE_NAME "nafuda")
-set(CPACK_PACKAGE_VERSION "0.4.0")
+set(CPACK_PACKAGE_VERSION "0.5.0")
 set(CPACK_PACKAGE_CONTACT "Ahmad Ardani <ahmadardani2011@gmail.com>")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "A lightweight tool for copying project structure and providing code context for LLMs.")
 
