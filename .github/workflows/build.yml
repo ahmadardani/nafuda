@@ -10,17 +10,17 @@ jobs:
 
     steps:
     - name: Checkout repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
-    - name: Install Qt
+    - name: Install Qt (MSVC Instead of MinGW)
       uses: jurplel/install-qt-action@v3
       with:
         version: 6.6.2
-        arch: win64_mingw
+        arch: win64_msvc2019_64
 
-    - name: Configure project
+    - name: Configure project (MSVC)
       run: |
-        cmake -B build -S . -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+        cmake -B build -S . -G "Visual Studio 17 2022" -DCMAKE_BUILD_TYPE=Release
 
     - name: Build
       run: |
