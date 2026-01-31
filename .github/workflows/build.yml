@@ -1,0 +1,37 @@
+name: Build Qt App
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: 6.6.2
+        arch: win64_mingw
+
+    - name: Configure project
+      run: |
+        cmake -B build -S . -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      run: |
+        cmake --build build --config Release
+
+    - name: Deploy Qt dependencies
+      run: |
+        windeployqt build/Release/nafuda.exe --release
+
+    - name: Upload Artifact (.exe + DLL)
+      uses: actions/upload-artifact@v3
+      with:
+        name: nafuda-windows
+        path: build/Release
