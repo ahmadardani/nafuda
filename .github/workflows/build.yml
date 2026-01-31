@@ -31,7 +31,7 @@ jobs:
         windeployqt build/Release/nafuda.exe --release
 
     - name: Upload Artifact (.exe + DLL)
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: nafuda-windows
         path: build/Release
