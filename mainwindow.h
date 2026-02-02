@@ -10,6 +10,7 @@
 #include <QLabel>
 #include <QDateTime>
 #include <QMap>
+#include <QFileSystemWatcher>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -46,6 +47,8 @@ private slots:
     void onWelcomeListClicked(QListWidgetItem *item);
     void clearRecentList();
 
+    void reloadCurrentFile(const QString &path);
+
 private:
     Ui::MainWindow *ui;
     QString currentRootDir;
@@ -62,6 +65,9 @@ private:
 
     QNetworkAccessManager *netManager;
     const QString currentVersion = "v0.5.0";
+
+    QFileSystemWatcher *fileWatcher;
+    QString currentFilePath;
 
     void populateTree(const QString &path, QTreeWidgetItem *parentItem);
     void setAllChildCheckState(QTreeWidgetItem *item, Qt::CheckState state);

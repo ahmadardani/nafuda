@@ -29,6 +29,7 @@
 #include <QMap>
 #include <QStyle>
 #include <QHeaderView>
+#include <QScrollBar>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -107,6 +108,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     netManager = new QNetworkAccessManager(this);
     connect(netManager, &QNetworkAccessManager::finished, this, &MainWindow::onUpdateResult);
+
+    fileWatcher = new QFileSystemWatcher(this);
+    connect(fileWatcher, &QFileSystemWatcher::fileChanged, this, &MainWindow::reloadCurrentFile);
 }
 
 MainWindow::~MainWindow() { delete ui; }
@@ -179,6 +183,11 @@ void MainWindow::loadProject(const QString &path) {
     ui->lblStatus->clear();
     ui->codeViewer->clear();
     ui->lblFileInfo->setText("Select a file to preview info");
+
+    if (!currentFilePath.isEmpty()) {
+        fileWatcher->removePath(currentFilePath);
+        currentFilePath.clear();
+    }
 
     QTreeWidgetItem *rootItem = new QTreeWidgetItem(ui->treeWidget);
     rootItem->setText(0, dir.dirName());
@@ -339,6 +348,12 @@ void MainWindow::onTreeItemClicked(QTreeWidgetItem *item, int column) {
     QFileInfo info(path);
 
     if (info.isFile()) {
+        if (!currentFilePath.isEmpty() && currentFilePath != path) {
+            fileWatcher->removePath(currentFilePath);
+        }
+        currentFilePath = path;
+        fileWatcher->addPath(currentFilePath);
+
         double sizeInKB = info.size() / 1024.0;
         QString fileInfoText = QString("<b>File:</b> %1 &nbsp;&nbsp;|&nbsp;&nbsp; <b>Size:</b> %2 KB &nbsp;&nbsp;|&nbsp;&nbsp; <b>Format:</b> %3")
                                    .arg(info.fileName())
@@ -353,8 +368,26 @@ void MainWindow::onTreeItemClicked(QTreeWidgetItem *item, int column) {
             ui->codeViewer->setText(file.readAll());
         }
     } else {
+        if (!currentFilePath.isEmpty()) {
+            fileWatcher->removePath(currentFilePath);
+            currentFilePath.clear();
+        }
         ui->lblFileInfo->setText("Folder: " + info.fileName());
         ui->codeViewer->clear();
+    }
+}
+
+void MainWindow::reloadCurrentFile(const QString &path) {
+    if (path == currentFilePath) {
+        QFile file(path);
+        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            int vScrollBarValue = ui->codeViewer->verticalScrollBar()->value();
+            ui->codeViewer->setText(file.readAll());
+            ui->codeViewer->verticalScrollBar()->setValue(vScrollBarValue);
+
+            ui->lblStatus->setText("File reloaded externally!");
+            QTimer::singleShot(2000, [this](){ ui->lblStatus->clear(); });
+        }
     }
 }
 
