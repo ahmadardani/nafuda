@@ -28,12 +28,16 @@
 #include <QToolButton>
 #include <QMap>
 #include <QStyle>
+#include <QHeaderView>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+    ui->treeWidget->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    ui->treeWidget->header()->setStretchLastSection(false);
 
     setWindowIcon(QIcon(":/app_icon.png"));
     setWindowTitle("Nafuda");
@@ -468,7 +472,7 @@ void MainWindow::openTemplateOptions() {
     btnAdd->setToolTip("Create New Preset");
 
     QToolButton *btnRename = new QToolButton(&dlg);
-    btnRename->setText(QString::fromUtf8("\u270E")); // Pencil unicode symbol
+    btnRename->setText(QString::fromUtf8("\u270E"));
     btnRename->setToolTip("Rename Preset");
 
     QToolButton *btnDel = new QToolButton(&dlg);
@@ -527,8 +531,6 @@ void MainWindow::openTemplateOptions() {
 
             int idx = cmbPresets->currentIndex();
             cmbPresets->setItemText(idx, text);
-            // QComboBox automatically updates current text if index stays, but explicitly:
-            // cmbPresets->setCurrentText(text); // Usually not needed if index matches
         }
     });
 
