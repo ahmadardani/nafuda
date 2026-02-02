@@ -414,6 +414,7 @@
      <string>Options</string>
     </property>
     <addaction name="actionTemplateSettings"/>
+    <addaction name="actionDarkMode"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -461,6 +462,14 @@
   <action name="actionClearRecent">
    <property name="text">
     <string>Clear Recent</string>
+   </property>
+  </action>
+  <action name="actionDarkMode">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Dark Mode</string>
    </property>
   </action>
  </widget>

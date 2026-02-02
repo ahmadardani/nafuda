@@ -65,6 +65,19 @@ MainWindow::MainWindow(QWidget *parent)
     recentFiles = settings.value("recentFiles").toStringList();
     updateRecentMenu();
 
+    bool systemDark = false;
+#ifdef Q_OS_WIN
+    QSettings themeSettings("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", QSettings::NativeFormat);
+    if (themeSettings.value("AppsUseLightTheme", 1).toInt() == 0) {
+        systemDark = true;
+    }
+#endif
+    bool isDark = settings.value("darkMode", systemDark).toBool();
+    ui->actionDarkMode->setChecked(isDark);
+    toggleDarkMode(isDark);
+
+    connect(ui->actionDarkMode, &QAction::toggled, this, &MainWindow::toggleDarkMode);
+
     settings.beginGroup("Presets");
     QStringList keys = settings.childKeys();
     if (keys.isEmpty()) {
@@ -114,6 +127,103 @@ MainWindow::MainWindow(QWidget *parent)
 }
 
 MainWindow::~MainWindow() { delete ui; }
+
+void MainWindow::toggleDarkMode(bool checked) {
+    if (checked) {
+        QString qss = R"(
+            QMainWindow, QDialog { background-color: #353535; color: #e0e0e0; }
+
+            QTreeWidget, QListWidget, QTreeView, QListView {
+                background-color: #2b2b2b;
+                color: #e0e0e0;
+                border: 1px solid #444;
+                outline: 0;
+            }
+            QTreeWidget::item:hover, QListWidget::item:hover {
+                background-color: #383838;
+            }
+            QTreeWidget::item:selected, QListWidget::item:selected {
+                background-color: #2a82da;
+                color: white;
+            }
+
+            QHeaderView {
+                background-color: #383838;
+                border: none;
+            }
+            QHeaderView::section {
+                background-color: #383838;
+                color: #e0e0e0;
+                border: 1px solid #444;
+                padding: 4px;
+            }
+            QHeaderView::section:checked {
+                background-color: #383838;
+            }
+
+            QTableCornerButton::section {
+                background-color: #383838;
+                border: 1px solid #444;
+            }
+
+            QTextEdit, QPlainTextEdit {
+                background-color: #2b2b2b;
+                color: #e0e0e0;
+                border: 1px solid #444;
+            }
+
+            QScrollBar { background: #2b2b2b; border: none; }
+            QScrollBar::handle { background: #555; border-radius: 2px; }
+            QScrollBar::handle:hover { background: #666; }
+            QScrollBar::add-page, QScrollBar::sub-page { background: none; }
+
+            QPushButton {
+                background-color: #404040;
+                color: #e0e0e0;
+                border: 1px solid #555;
+                padding: 5px;
+                border-radius: 3px;
+            }
+            QPushButton:hover { background-color: #505050; }
+            QPushButton:pressed { background-color: #2a82da; color: white; }
+
+            QCheckBox, QRadioButton, QLabel, QGroupBox { color: #e0e0e0; }
+            QCheckBox::indicator { border: 1px solid #777; background: #333; width: 13px; height: 13px; }
+            QCheckBox::indicator:checked { background: #2a82da; border: 1px solid #2a82da; }
+
+            QMenuBar { background-color: #353535; color: #e0e0e0; }
+            QMenuBar::item:selected { background-color: #444; }
+            QMenu { background-color: #353535; color: #e0e0e0; border: 1px solid #555; }
+            QMenu::item:selected { background-color: #2a82da; color: white; }
+        )";
+        qApp->setStyleSheet(qss);
+
+        QString headerStyle = "background-color: #2d2d2d; padding: 5px; border-bottom: 1px solid #444; color: #ccc; font-weight: bold; font-size: 11px;";
+        ui->lblFileInfo->setStyleSheet(headerStyle);
+        ui->lblSelectedHeader->setStyleSheet(headerStyle);
+
+        ui->btnWelcomeOpen->setStyleSheet("padding: 15px 30px; background-color: #404040; border: 1px solid #555; color: #e0e0e0; font-size: 14px;");
+        ui->listWelcomeRecent->setStyleSheet("QListWidget { border: 1px solid #444; background: #2b2b2b; color: #e0e0e0; border-radius: 4px; } QListWidget::item { padding: 8px; border-bottom: 1px solid #444; } QListWidget::item:hover { background: #383838; }");
+
+        statusPathLabel->setStyleSheet("padding-left: 5px; color: #ccc;");
+
+    } else {
+
+        qApp->setStyleSheet(""); 
+
+        ui->lblFileInfo->setStyleSheet("background-color: #f5f5f5; padding: 5px; border-bottom: 1px solid #ccc; color: #444; font-size: 11px;");
+        ui->lblSelectedHeader->setStyleSheet("background-color: #f5f5f5; padding: 5px; border-bottom: 1px solid #ccc; color: #444; font-weight: bold; font-size: 11px;");
+
+        ui->btnWelcomeOpen->setStyleSheet("padding: 15px 30px; background-color: #f0f0f0; border: 1px solid #ccc; font-size: 14px; color: black;");
+
+        ui->listWelcomeRecent->setStyleSheet("QListWidget { border: 1px solid #ddd; background: #fff; border-radius: 4px; color: black; } QListWidget::item { padding: 8px; border-bottom: 1px solid #eee; } QListWidget::item:hover { background: #f5f5f5; }");
+
+        statusPathLabel->setStyleSheet("padding-left: 5px; color: #555;");
+    }
+
+    QSettings settings("Nafuda", "Settings");
+    settings.setValue("darkMode", checked);
+}
 
 void MainWindow::setAllChildCheckState(QTreeWidgetItem *item, Qt::CheckState state) {
     for (int i = 0; i < item->childCount(); ++i) {

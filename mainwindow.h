@@ -48,6 +48,7 @@ private slots:
     void clearRecentList();
 
     void reloadCurrentFile(const QString &path);
+    void toggleDarkMode(bool checked);
 
 private:
     Ui::MainWindow *ui;
