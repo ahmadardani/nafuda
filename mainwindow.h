@@ -65,7 +65,7 @@ private:
     const int maxRecentFiles = 10;
 
     QNetworkAccessManager *netManager;
-    const QString currentVersion = "v0.5.0";
+    const QString currentVersion = "v0.6.0";
 
     QFileSystemWatcher *fileWatcher;
     QString currentFilePath;
