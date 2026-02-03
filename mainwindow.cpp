@@ -30,6 +30,7 @@
 #include <QStyle>
 #include <QHeaderView>
 #include <QScrollBar>
+#include <QPalette>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -130,12 +131,25 @@ MainWindow::~MainWindow() { delete ui; }
 
 void MainWindow::toggleDarkMode(bool checked) {
     if (checked) {
-        QString qss = R"(
-            QMainWindow, QDialog { background-color: #353535; color: #e0e0e0; }
+        QPalette darkPalette;
+        darkPalette.setColor(QPalette::Window, QColor("#353535"));
+        darkPalette.setColor(QPalette::WindowText, QColor("#e0e0e0"));
+        darkPalette.setColor(QPalette::Base, QColor("#2b2b2b"));
+        darkPalette.setColor(QPalette::AlternateBase, QColor("#353535"));
+        darkPalette.setColor(QPalette::ToolTipBase, Qt::white);
+        darkPalette.setColor(QPalette::ToolTipText, Qt::white);
+        darkPalette.setColor(QPalette::Text, QColor("#e0e0e0"));
+        darkPalette.setColor(QPalette::Button, QColor("#353535"));
+        darkPalette.setColor(QPalette::ButtonText, QColor("#e0e0e0"));
+        darkPalette.setColor(QPalette::BrightText, Qt::red);
+        darkPalette.setColor(QPalette::Link, QColor("#2a82da"));
+        darkPalette.setColor(QPalette::Highlight, QColor("#2a82da"));
+        darkPalette.setColor(QPalette::HighlightedText, Qt::black);
 
+        qApp->setPalette(darkPalette);
+
+        QString qss = R"(
             QTreeWidget, QListWidget, QTreeView, QListView {
-                background-color: #2b2b2b;
-                color: #e0e0e0;
                 border: 1px solid #444;
                 outline: 0;
             }
@@ -157,20 +171,6 @@ void MainWindow::toggleDarkMode(bool checked) {
                 border: 1px solid #444;
                 padding: 4px;
             }
-            QHeaderView::section:checked {
-                background-color: #383838;
-            }
-
-            QTableCornerButton::section {
-                background-color: #383838;
-                border: 1px solid #444;
-            }
-
-            QTextEdit, QPlainTextEdit {
-                background-color: #2b2b2b;
-                color: #e0e0e0;
-                border: 1px solid #444;
-            }
 
             QScrollBar { background: #2b2b2b; border: none; }
             QScrollBar::handle { background: #555; border-radius: 2px; }
@@ -187,12 +187,9 @@ void MainWindow::toggleDarkMode(bool checked) {
             QPushButton:hover { background-color: #505050; }
             QPushButton:pressed { background-color: #2a82da; color: white; }
 
-            QCheckBox, QRadioButton, QLabel, QGroupBox { color: #e0e0e0; }
             QCheckBox::indicator { border: 1px solid #777; background: #333; width: 13px; height: 13px; }
             QCheckBox::indicator:checked { background: #2a82da; border: 1px solid #2a82da; }
 
-            QMenuBar { background-color: #353535; color: #e0e0e0; }
-            QMenuBar::item:selected { background-color: #444; }
             QMenu { background-color: #353535; color: #e0e0e0; border: 1px solid #555; }
             QMenu::item:selected { background-color: #2a82da; color: white; }
         )";
@@ -208,8 +205,8 @@ void MainWindow::toggleDarkMode(bool checked) {
         statusPathLabel->setStyleSheet("padding-left: 5px; color: #ccc;");
 
     } else {
-
-        qApp->setStyleSheet(""); 
+        qApp->setPalette(style()->standardPalette());
+        qApp->setStyleSheet("");
 
         ui->lblFileInfo->setStyleSheet("background-color: #f5f5f5; padding: 5px; border-bottom: 1px solid #ccc; color: #444; font-size: 11px;");
         ui->lblSelectedHeader->setStyleSheet("background-color: #f5f5f5; padding: 5px; border-bottom: 1px solid #ccc; color: #444; font-weight: bold; font-size: 11px;");
