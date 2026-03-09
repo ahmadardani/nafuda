@@ -232,7 +232,7 @@
               <item>
                <widget class="QPushButton" name="btnRefresh">
                 <property name="text">
-                 <string>Refresh</string>
+                 <string>↻ Refresh</string>
                 </property>
                 <property name="toolTip">
                  <string>Refresh Project (F5)</string>

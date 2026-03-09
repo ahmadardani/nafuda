@@ -99,8 +99,6 @@ MainWindow::MainWindow(QWidget *parent)
     }
     contentTemplate = presets.value(currentPresetName, defaultTemplate);
 
-    ui->btnRefresh->setIcon(qApp->style()->standardIcon(QStyle::SP_BrowserReload));
-
     connect(ui->btnWelcomeOpen, &QPushButton::clicked, this, &MainWindow::openFolder);
     connect(ui->listWelcomeRecent, &QListWidget::itemClicked, this, &MainWindow::onWelcomeListClicked);
 
