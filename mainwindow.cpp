@@ -99,11 +99,14 @@ MainWindow::MainWindow(QWidget *parent)
     }
     contentTemplate = presets.value(currentPresetName, defaultTemplate);
 
+    ui->btnRefresh->setIcon(qApp->style()->standardIcon(QStyle::SP_BrowserReload));
+
     connect(ui->btnWelcomeOpen, &QPushButton::clicked, this, &MainWindow::openFolder);
     connect(ui->listWelcomeRecent, &QListWidget::itemClicked, this, &MainWindow::onWelcomeListClicked);
 
     connect(ui->btnSelectAll, &QPushButton::clicked, this, &MainWindow::selectAllFiles);
     connect(ui->btnDeselectAll, &QPushButton::clicked, this, &MainWindow::deselectAllFiles);
+    connect(ui->btnRefresh, &QPushButton::clicked, this, &MainWindow::refreshProject);
 
     connect(ui->actionOpenFolder, &QAction::triggered, this, &MainWindow::openFolder);
     connect(ui->actionTemplateSettings, &QAction::triggered, this, &MainWindow::openTemplateOptions);
@@ -111,6 +114,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionCheckUpdates, &QAction::triggered, this, &MainWindow::checkUpdate);
     connect(ui->actionExit, &QAction::triggered, qApp, &QApplication::quit);
     connect(ui->actionClearRecent, &QAction::triggered, this, &MainWindow::clearRecentList);
+    connect(ui->actionRefresh, &QAction::triggered, this, &MainWindow::refreshProject);
 
     connect(ui->treeWidget, &QTreeWidget::itemClicked, this, &MainWindow::onTreeItemClicked);
     connect(ui->treeWidget, &QTreeWidget::itemChanged, this, &MainWindow::onTreeItemChanged);
@@ -789,4 +793,23 @@ void MainWindow::onUpdateResult(QNetworkReply *reply) {
         QMessageBox::warning(this, "Check Failed", "Could not check for updates.\nPlease check your internet connection.");
     }
     reply->deleteLater();
+}
+
+void MainWindow::refreshProject() {
+    if (currentRootDir.isEmpty()) return;
+    QStringList selectedFiles;
+    for (int i = 0; i < ui->selectedListWidget->count(); ++i) {
+        selectedFiles << ui->selectedListWidget->item(i)->text();
+    }
+    loadProject(currentRootDir);
+    QTreeWidgetItemIterator it(ui->treeWidget);
+    while (*it) {
+        if ((*it)->childCount() == 0) {
+            QString relPath = QDir(currentRootDir).relativeFilePath((*it)->data(0, Qt::UserRole).toString());
+            if (selectedFiles.contains(relPath)) {
+                (*it)->setCheckState(0, Qt::Checked);
+            }
+        }
+        ++it;
+    }
 }

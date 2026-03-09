@@ -49,6 +49,7 @@ private slots:
 
     void reloadCurrentFile(const QString &path);
     void toggleDarkMode(bool checked);
+    void refreshProject();
 
 private:
     Ui::MainWindow *ui;

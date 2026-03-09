@@ -229,6 +229,16 @@
                 </property>
                </widget>
               </item>
+              <item>
+               <widget class="QPushButton" name="btnRefresh">
+                <property name="text">
+                 <string>Refresh</string>
+                </property>
+                <property name="toolTip">
+                 <string>Refresh Project (F5)</string>
+                </property>
+               </widget>
+              </item>
              </layout>
             </item>
             <item>
@@ -406,6 +416,7 @@
     </widget>
     <addaction name="actionOpenFolder"/>
     <addaction name="menuOpenRecent"/>
+    <addaction name="actionRefresh"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
@@ -470,6 +481,14 @@
    </property>
    <property name="text">
     <string>Dark Mode</string>
+   </property>
+  </action>
+  <action name="actionRefresh">
+   <property name="text">
+    <string>Refresh Project</string>
+   </property>
+   <property name="shortcut">
+    <string>F5</string>
    </property>
   </action>
  </widget>
