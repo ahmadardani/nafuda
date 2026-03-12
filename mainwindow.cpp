@@ -46,6 +46,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->stackedWidget->setCurrentIndex(0);
     ui->selectedListWidget->setFrameShape(QFrame::NoFrame);
     ui->lblStatus->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    ui->warningBarWidget->hide();
 
     statusPathLabel = new QLabel(this);
     statusPathLabel->setStyleSheet("padding-left: 5px; color: #555;");
@@ -105,6 +106,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnSelectAll, &QPushButton::clicked, this, &MainWindow::selectAllFiles);
     connect(ui->btnDeselectAll, &QPushButton::clicked, this, &MainWindow::deselectAllFiles);
     connect(ui->btnRefresh, &QPushButton::clicked, this, &MainWindow::refreshProject);
+    connect(ui->btnWarningReload, &QPushButton::clicked, this, &MainWindow::refreshProject);
 
     connect(ui->actionOpenFolder, &QAction::triggered, this, &MainWindow::openFolder);
     connect(ui->actionTemplateSettings, &QAction::triggered, this, &MainWindow::openTemplateOptions);
@@ -126,7 +128,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(netManager, &QNetworkAccessManager::finished, this, &MainWindow::onUpdateResult);
 
     fileWatcher = new QFileSystemWatcher(this);
-    connect(fileWatcher, &QFileSystemWatcher::fileChanged, this, &MainWindow::reloadCurrentFile);
+    connect(fileWatcher, &QFileSystemWatcher::directoryChanged, this, &MainWindow::onProjectModified);
+    connect(fileWatcher, &QFileSystemWatcher::fileChanged, this, &MainWindow::onProjectModified);
 }
 
 MainWindow::~MainWindow() { delete ui; }
@@ -204,6 +207,9 @@ void MainWindow::toggleDarkMode(bool checked) {
         ui->btnWelcomeOpen->setStyleSheet("padding: 15px 30px; background-color: #404040; border: 1px solid #555; color: #e0e0e0; font-size: 14px;");
         ui->listWelcomeRecent->setStyleSheet("QListWidget { border: 1px solid #444; background: #2b2b2b; color: #e0e0e0; border-radius: 4px; } QListWidget::item { padding: 8px; border-bottom: 1px solid #444; } QListWidget::item:hover { background: #383838; }");
 
+        ui->warningBarWidget->setStyleSheet("background-color: #5c4b12; border: 1px solid #7a6318; color: #e6c86e; border-radius: 3px;");
+        ui->btnWarningReload->setStyleSheet("background-color: #856404; color: #fff; border: 1px solid #d39e00; padding: 3px 10px; border-radius: 2px;");
+
         statusPathLabel->setStyleSheet("padding-left: 5px; color: #ccc;");
 
     } else {
@@ -216,6 +222,9 @@ void MainWindow::toggleDarkMode(bool checked) {
         ui->btnWelcomeOpen->setStyleSheet("padding: 15px 30px; background-color: #f0f0f0; border: 1px solid #ccc; font-size: 14px; color: black;");
 
         ui->listWelcomeRecent->setStyleSheet("QListWidget { border: 1px solid #ddd; background: #fff; border-radius: 4px; color: black; } QListWidget::item { padding: 8px; border-bottom: 1px solid #eee; } QListWidget::item:hover { background: #f5f5f5; }");
+
+        ui->warningBarWidget->setStyleSheet("background-color: #fff3cd; border: 1px solid #ffe69c; color: #856404; border-radius: 3px;");
+        ui->btnWarningReload->setStyleSheet("background-color: #ffc107; color: #000; border: 1px solid #d39e00; padding: 3px 10px; border-radius: 2px;");
 
         statusPathLabel->setStyleSheet("padding-left: 5px; color: #555;");
     }
@@ -292,11 +301,21 @@ void MainWindow::loadProject(const QString &path) {
     ui->lblStatus->clear();
     ui->codeViewer->clear();
     ui->lblFileInfo->setText("Select a file to preview info");
+    ui->warningBarWidget->hide();
 
-    if (!currentFilePath.isEmpty()) {
-        fileWatcher->removePath(currentFilePath);
-        currentFilePath.clear();
+    if (!fileWatcher->directories().isEmpty()) fileWatcher->removePaths(fileWatcher->directories());
+    if (!fileWatcher->files().isEmpty()) fileWatcher->removePaths(fileWatcher->files());
+
+    QStringList watchDirs;
+    watchDirs << path;
+    QDirIterator dirIt(path, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+    while (dirIt.hasNext()) {
+        QString subDir = dirIt.next();
+        if (!subDir.contains("/.") && !subDir.contains("\\.")) {
+            watchDirs << subDir;
+        }
     }
+    fileWatcher->addPaths(watchDirs);
 
     QTreeWidgetItem *rootItem = new QTreeWidgetItem(ui->treeWidget);
     rootItem->setText(0, dir.dirName());
@@ -455,13 +474,13 @@ void MainWindow::populateTree(const QString &path, QTreeWidgetItem *parentItem) 
 void MainWindow::onTreeItemClicked(QTreeWidgetItem *item, int column) {
     QString path = item->data(0, Qt::UserRole).toString();
     QFileInfo info(path);
+    ui->warningBarWidget->hide();
 
     if (info.isFile()) {
-        if (!currentFilePath.isEmpty() && currentFilePath != path) {
-            fileWatcher->removePath(currentFilePath);
-        }
         currentFilePath = path;
-        fileWatcher->addPath(currentFilePath);
+        if (!fileWatcher->files().contains(currentFilePath)) {
+            fileWatcher->addPath(currentFilePath);
+        }
 
         double sizeInKB = info.size() / 1024.0;
         QString fileInfoText = QString("<b>File:</b> %1 &nbsp;&nbsp;|&nbsp;&nbsp; <b>Size:</b> %2 KB &nbsp;&nbsp;|&nbsp;&nbsp; <b>Format:</b> %3")
@@ -477,27 +496,14 @@ void MainWindow::onTreeItemClicked(QTreeWidgetItem *item, int column) {
             ui->codeViewer->setText(file.readAll());
         }
     } else {
-        if (!currentFilePath.isEmpty()) {
-            fileWatcher->removePath(currentFilePath);
-            currentFilePath.clear();
-        }
+        currentFilePath.clear();
         ui->lblFileInfo->setText("Folder: " + info.fileName());
         ui->codeViewer->clear();
     }
 }
 
-void MainWindow::reloadCurrentFile(const QString &path) {
-    if (path == currentFilePath) {
-        QFile file(path);
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            int vScrollBarValue = ui->codeViewer->verticalScrollBar()->value();
-            ui->codeViewer->setText(file.readAll());
-            ui->codeViewer->verticalScrollBar()->setValue(vScrollBarValue);
-
-            ui->lblStatus->setText("File reloaded externally!");
-            QTimer::singleShot(2000, [this](){ ui->lblStatus->clear(); });
-        }
-    }
+void MainWindow::onProjectModified(const QString &path) {
+    ui->warningBarWidget->show();
 }
 
 void MainWindow::onCurrentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous) {
@@ -795,19 +801,32 @@ void MainWindow::onUpdateResult(QNetworkReply *reply) {
 
 void MainWindow::refreshProject() {
     if (currentRootDir.isEmpty()) return;
+
+    QString lastViewedFile = currentFilePath;
     QStringList selectedFiles;
     for (int i = 0; i < ui->selectedListWidget->count(); ++i) {
         selectedFiles << ui->selectedListWidget->item(i)->text();
     }
+
     loadProject(currentRootDir);
+
     QTreeWidgetItemIterator it(ui->treeWidget);
     while (*it) {
         if ((*it)->childCount() == 0) {
-            QString relPath = QDir(currentRootDir).relativeFilePath((*it)->data(0, Qt::UserRole).toString());
+            QString fullPath = (*it)->data(0, Qt::UserRole).toString();
+            QString relPath = QDir(currentRootDir).relativeFilePath(fullPath);
+
             if (selectedFiles.contains(relPath)) {
                 (*it)->setCheckState(0, Qt::Checked);
+            }
+
+            if (fullPath == lastViewedFile) {
+                ui->treeWidget->setCurrentItem(*it);
+                onTreeItemClicked(*it, 0);
             }
         }
         ++it;
     }
+
+    ui->warningBarWidget->hide();
 }

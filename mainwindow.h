@@ -47,7 +47,7 @@ private slots:
     void onWelcomeListClicked(QListWidgetItem *item);
     void clearRecentList();
 
-    void reloadCurrentFile(const QString &path);
+    void onProjectModified(const QString &path);
     void toggleDarkMode(bool checked);
     void refreshProject();
 
