@@ -11,6 +11,7 @@
 #include <QDateTime>
 #include <QMap>
 #include <QFileSystemWatcher>
+#include <QIcon>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -71,7 +72,10 @@ private:
     QFileSystemWatcher *fileWatcher;
     QString currentFilePath;
 
-    void populateTree(const QString &path, QTreeWidgetItem *parentItem);
+    QIcon iconDir;
+    QIcon iconFile;
+
+    void populateTree(const QString &path, QTreeWidgetItem *parentItem, QStringList &watchDirs);
     void setAllChildCheckState(QTreeWidgetItem *item, Qt::CheckState state);
     void updateFileList(QTreeWidgetItem *item);
     QString generateAsciiTree(const QString &path, const QString &prefix);

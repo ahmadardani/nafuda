@@ -130,6 +130,9 @@ MainWindow::MainWindow(QWidget *parent)
     fileWatcher = new QFileSystemWatcher(this);
     connect(fileWatcher, &QFileSystemWatcher::directoryChanged, this, &MainWindow::onProjectModified);
     connect(fileWatcher, &QFileSystemWatcher::fileChanged, this, &MainWindow::onProjectModified);
+
+    iconDir = QApplication::style()->standardIcon(QStyle::SP_DirIcon);
+    iconFile = QApplication::style()->standardIcon(QStyle::SP_FileIcon);
 }
 
 MainWindow::~MainWindow() { delete ui; }
@@ -248,6 +251,7 @@ void MainWindow::setAllChildCheckState(QTreeWidgetItem *item, Qt::CheckState sta
 
 void MainWindow::selectAllFiles() {
     if (ui->treeWidget->topLevelItemCount() == 0) return;
+    ui->treeWidget->setUpdatesEnabled(false);
     ui->treeWidget->blockSignals(true);
     for (int i = 0; i < ui->treeWidget->topLevelItemCount(); ++i) {
         QTreeWidgetItem *root = ui->treeWidget->topLevelItem(i);
@@ -255,6 +259,7 @@ void MainWindow::selectAllFiles() {
         setAllChildCheckState(root, Qt::Checked);
     }
     ui->treeWidget->blockSignals(false);
+    ui->treeWidget->setUpdatesEnabled(true);
 
     ui->selectedListWidget->clear();
     QDir rootDir(currentRootDir);
@@ -270,6 +275,7 @@ void MainWindow::selectAllFiles() {
 
 void MainWindow::deselectAllFiles() {
     if (ui->treeWidget->topLevelItemCount() == 0) return;
+    ui->treeWidget->setUpdatesEnabled(false);
     ui->treeWidget->blockSignals(true);
     for (int i = 0; i < ui->treeWidget->topLevelItemCount(); ++i) {
         QTreeWidgetItem *root = ui->treeWidget->topLevelItem(i);
@@ -277,6 +283,7 @@ void MainWindow::deselectAllFiles() {
         setAllChildCheckState(root, Qt::Unchecked);
     }
     ui->treeWidget->blockSignals(false);
+    ui->treeWidget->setUpdatesEnabled(true);
     ui->selectedListWidget->clear();
 }
 
@@ -296,6 +303,8 @@ void MainWindow::loadProject(const QString &path) {
     statusPathLabel->setText("Loaded: " + path);
 
     ui->stackedWidget->setCurrentIndex(1);
+
+    ui->treeWidget->setUpdatesEnabled(false);
     ui->treeWidget->clear();
     ui->selectedListWidget->clear();
     ui->lblStatus->clear();
@@ -308,23 +317,21 @@ void MainWindow::loadProject(const QString &path) {
 
     QStringList watchDirs;
     watchDirs << path;
-    QDirIterator dirIt(path, QDir::Dirs | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
-    while (dirIt.hasNext()) {
-        QString subDir = dirIt.next();
-        if (!subDir.contains("/.") && !subDir.contains("\\.")) {
-            watchDirs << subDir;
-        }
-    }
-    fileWatcher->addPaths(watchDirs);
 
     QTreeWidgetItem *rootItem = new QTreeWidgetItem(ui->treeWidget);
     rootItem->setText(0, dir.dirName());
-    rootItem->setIcon(0, QApplication::style()->standardIcon(QStyle::SP_DirIcon));
+    rootItem->setIcon(0, iconDir);
     rootItem->setData(0, Qt::UserRole, path);
     rootItem->setCheckState(0, Qt::Unchecked);
 
-    populateTree(path, rootItem);
+    populateTree(path, rootItem, watchDirs);
     ui->treeWidget->expandItem(rootItem);
+
+    if (!watchDirs.isEmpty()) {
+        fileWatcher->addPaths(watchDirs);
+    }
+
+    ui->treeWidget->setUpdatesEnabled(true);
 }
 
 void MainWindow::addToRecent(const QString &path) {
@@ -451,7 +458,7 @@ void MainWindow::clearRecentList() {
     updateRecentMenu();
 }
 
-void MainWindow::populateTree(const QString &path, QTreeWidgetItem *parentItem) {
+void MainWindow::populateTree(const QString &path, QTreeWidgetItem *parentItem, QStringList &watchDirs) {
     QDir dir(path);
     dir.setFilter(QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
     dir.setSorting(QDir::DirsFirst | QDir::Name);
@@ -463,10 +470,11 @@ void MainWindow::populateTree(const QString &path, QTreeWidgetItem *parentItem) 
         item->setCheckState(0, Qt::Unchecked);
 
         if (info.isDir()) {
-            item->setIcon(0, QApplication::style()->standardIcon(QStyle::SP_DirIcon));
-            populateTree(info.filePath(), item);
+            item->setIcon(0, iconDir);
+            watchDirs << info.filePath();
+            populateTree(info.filePath(), item, watchDirs);
         } else {
-            item->setIcon(0, QApplication::style()->standardIcon(QStyle::SP_FileIcon));
+            item->setIcon(0, iconFile);
         }
     }
 }
@@ -808,6 +816,9 @@ void MainWindow::refreshProject() {
         selectedFiles << ui->selectedListWidget->item(i)->text();
     }
 
+    ui->treeWidget->setUpdatesEnabled(false);
+    ui->treeWidget->blockSignals(true);
+
     loadProject(currentRootDir);
 
     QTreeWidgetItemIterator it(ui->treeWidget);
@@ -828,5 +839,7 @@ void MainWindow::refreshProject() {
         ++it;
     }
 
+    ui->treeWidget->blockSignals(false);
+    ui->treeWidget->setUpdatesEnabled(true);
     ui->warningBarWidget->hide();
 }
