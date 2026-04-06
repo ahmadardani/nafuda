@@ -492,6 +492,7 @@
      <string>Options</string>
     </property>
     <addaction name="actionTemplateSettings"/>
+    <addaction name="actionDataFilterSettings"/>
     <addaction name="actionDarkMode"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
@@ -556,6 +557,11 @@
    </property>
    <property name="shortcut">
     <string>F5</string>
+   </property>
+  </action>
+  <action name="actionDataFilterSettings">
+   <property name="text">
+    <string>Data Filter Settings...</string>
    </property>
   </action>
  </widget>

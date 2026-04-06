@@ -28,6 +28,7 @@ public:
 private slots:
     void openFolder();
     void openTemplateOptions();
+    void openDataFilterOptions();
     void showAbout();
 
     void selectAllFiles();
@@ -62,6 +63,7 @@ private:
     QString currentPresetName;
 
     QLabel *statusPathLabel;
+    QLabel *statusFilterLabel;
 
     QStringList recentFiles;
     const int maxRecentFiles = 10;
@@ -75,10 +77,15 @@ private:
     QIcon iconDir;
     QIcon iconFile;
 
+    bool filterDataFiles;
+    int maxDataLines;
+
     void populateTree(const QString &path, QTreeWidgetItem *parentItem, QStringList &watchDirs);
     void setAllChildCheckState(QTreeWidgetItem *item, Qt::CheckState state);
     void updateFileList(QTreeWidgetItem *item);
     QString generateAsciiTree(const QString &path, const QString &prefix);
+    QString processFileContent(const QString &filePath);
+    void updateFilterStatus();
 
     void loadProject(const QString &path);
     void addToRecent(const QString &path);

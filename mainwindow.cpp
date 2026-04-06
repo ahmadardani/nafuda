@@ -31,6 +31,8 @@
 #include <QHeaderView>
 #include <QScrollBar>
 #include <QPalette>
+#include <QCheckBox>
+#include <QSpinBox>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -52,6 +54,10 @@ MainWindow::MainWindow(QWidget *parent)
     statusPathLabel->setStyleSheet("padding-left: 5px; color: #555;");
     ui->statusbar->addWidget(statusPathLabel);
 
+    statusFilterLabel = new QLabel(this);
+    statusFilterLabel->setStyleSheet("padding-right: 15px; color: #d97706; font-weight: bold; font-size: 11px;");
+    ui->statusbar->addPermanentWidget(statusFilterLabel);
+
     QList<int> sizes;
     sizes << 300 << 600 << 300;
     ui->splitter->setSizes(sizes);
@@ -66,6 +72,10 @@ MainWindow::MainWindow(QWidget *parent)
     QSettings settings("Nafuda", "Settings");
     recentFiles = settings.value("recentFiles").toStringList();
     updateRecentMenu();
+
+    filterDataFiles = settings.value("filterDataFiles", false).toBool();
+    maxDataLines = settings.value("maxDataLines", 10).toInt();
+    updateFilterStatus();
 
     bool systemDark = false;
 #ifdef Q_OS_WIN
@@ -110,6 +120,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->actionOpenFolder, &QAction::triggered, this, &MainWindow::openFolder);
     connect(ui->actionTemplateSettings, &QAction::triggered, this, &MainWindow::openTemplateOptions);
+    connect(ui->actionDataFilterSettings, &QAction::triggered, this, &MainWindow::openDataFilterOptions);
     connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::showAbout);
     connect(ui->actionCheckUpdates, &QAction::triggered, this, &MainWindow::checkUpdate);
     connect(ui->actionExit, &QAction::triggered, qApp, &QApplication::quit);
@@ -136,6 +147,15 @@ MainWindow::MainWindow(QWidget *parent)
 }
 
 MainWindow::~MainWindow() { delete ui; }
+
+void MainWindow::updateFilterStatus() {
+    if (filterDataFiles) {
+        statusFilterLabel->setText(QString("Data Filter: ON (%1 lines)").arg(maxDataLines));
+        statusFilterLabel->show();
+    } else {
+        statusFilterLabel->hide();
+    }
+}
 
 void MainWindow::toggleDarkMode(bool checked) {
     if (checked) {
@@ -214,6 +234,7 @@ void MainWindow::toggleDarkMode(bool checked) {
         ui->btnWarningReload->setStyleSheet("background-color: #856404; color: #fff; border: 1px solid #d39e00; padding: 3px 10px; border-radius: 2px;");
 
         statusPathLabel->setStyleSheet("padding-left: 5px; color: #ccc;");
+        statusFilterLabel->setStyleSheet("padding-right: 15px; color: #fbbf24; font-weight: bold; font-size: 11px;");
 
     } else {
         qApp->setPalette(style()->standardPalette());
@@ -230,6 +251,7 @@ void MainWindow::toggleDarkMode(bool checked) {
         ui->btnWarningReload->setStyleSheet("background-color: #ffc107; color: #000; border: 1px solid #d39e00; padding: 3px 10px; border-radius: 2px;");
 
         statusPathLabel->setStyleSheet("padding-left: 5px; color: #555;");
+        statusFilterLabel->setStyleSheet("padding-right: 15px; color: #d97706; font-weight: bold; font-size: 11px;");
     }
 
     QSettings settings("Nafuda", "Settings");
@@ -499,10 +521,7 @@ void MainWindow::onTreeItemClicked(QTreeWidgetItem *item, int column) {
         ui->lblFileInfo->setTextFormat(Qt::RichText);
         ui->lblFileInfo->setText(fileInfoText);
 
-        QFile file(path);
-        if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            ui->codeViewer->setText(file.readAll());
-        }
+        ui->codeViewer->setText(processFileContent(path));
     } else {
         currentFilePath.clear();
         ui->lblFileInfo->setText("Folder: " + info.fileName());
@@ -561,6 +580,26 @@ QString MainWindow::generateAsciiTree(const QString &path, const QString &prefix
     return res;
 }
 
+QString MainWindow::processFileContent(const QString &filePath) {
+    QFile f(filePath);
+    if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) return "";
+
+    if (filterDataFiles && (filePath.endsWith(".csv", Qt::CaseInsensitive) || filePath.endsWith(".json", Qt::CaseInsensitive))) {
+        QString result;
+        QTextStream in(&f);
+        int lineCount = 0;
+        while (!in.atEnd() && lineCount < maxDataLines) {
+            result += in.readLine() + "\n";
+            lineCount++;
+        }
+        if (!in.atEnd()) {
+            result += QString("\n... [Data truncated by Nafuda: showing first %1 lines only] ...\n").arg(maxDataLines);
+        }
+        return result;
+    }
+    return f.readAll();
+}
+
 void MainWindow::copyFullContext() {
     if (currentRootDir.isEmpty()) return;
     if (ui->selectedListWidget->count() == 0) {
@@ -571,10 +610,11 @@ void MainWindow::copyFullContext() {
     QString out = "Project Structure:\n" + QDir(currentRootDir).dirName() + "\n" + generateAsciiTree(currentRootDir, "") + "\n\nFile Contents:\n";
     for(int i = 0; i < ui->selectedListWidget->count(); ++i) {
         QString rel = ui->selectedListWidget->item(i)->text();
-        QFile f(QDir(currentRootDir).filePath(rel));
-        if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QString fullPath = QDir(currentRootDir).filePath(rel);
+        QFile f(fullPath);
+        if (f.exists()) {
             QString entry = contentTemplate;
-            entry.replace("{name}", rel).replace("{code}", f.readAll());
+            entry.replace("{name}", rel).replace("{code}", processFileContent(fullPath));
             out += entry + "\n";
         }
     }
@@ -599,16 +639,61 @@ void MainWindow::copyFileContent() {
     QString out;
     for(int i = 0; i < ui->selectedListWidget->count(); ++i) {
         QString rel = ui->selectedListWidget->item(i)->text();
-        QFile f(QDir(currentRootDir).filePath(rel));
-        if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        QString fullPath = QDir(currentRootDir).filePath(rel);
+        QFile f(fullPath);
+        if (f.exists()) {
             QString entry = contentTemplate;
-            entry.replace("{name}", rel).replace("{code}", f.readAll());
+            entry.replace("{name}", rel).replace("{code}", processFileContent(fullPath));
             out += entry + "\n";
         }
     }
     QApplication::clipboard()->setText(out);
     ui->lblStatus->setText("Content Copied!");
     QTimer::singleShot(3000, [this](){ ui->lblStatus->clear(); });
+}
+
+void MainWindow::openDataFilterOptions() {
+    QDialog dlg(this);
+    dlg.setWindowTitle("Data Filter Settings");
+    dlg.resize(320, 120);
+    QVBoxLayout *layout = new QVBoxLayout(&dlg);
+
+    QCheckBox *chkEnable = new QCheckBox("Filter Data Files (.csv, .json)", &dlg);
+    chkEnable->setChecked(filterDataFiles);
+    layout->addWidget(chkEnable);
+
+    QHBoxLayout *spinLayout = new QHBoxLayout();
+    spinLayout->addWidget(new QLabel("Max lines:"));
+    QSpinBox *spinMax = new QSpinBox(&dlg);
+    spinMax->setRange(1, 10000);
+    spinMax->setValue(maxDataLines);
+    spinMax->setEnabled(filterDataFiles);
+    spinLayout->addWidget(spinMax);
+    layout->addLayout(spinLayout);
+
+    connect(chkEnable, &QCheckBox::toggled, spinMax, &QSpinBox::setEnabled);
+
+    QDialogButtonBox *btnBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    layout->addStretch();
+    layout->addWidget(btnBox);
+
+    connect(btnBox, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(btnBox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    if (dlg.exec() == QDialog::Accepted) {
+        filterDataFiles = chkEnable->isChecked();
+        maxDataLines = spinMax->value();
+
+        QSettings settings("Nafuda", "Settings");
+        settings.setValue("filterDataFiles", filterDataFiles);
+        settings.setValue("maxDataLines", maxDataLines);
+
+        updateFilterStatus();
+
+        if (!currentFilePath.isEmpty()) {
+            ui->codeViewer->setText(processFileContent(currentFilePath));
+        }
+    }
 }
 
 void MainWindow::openTemplateOptions() {
